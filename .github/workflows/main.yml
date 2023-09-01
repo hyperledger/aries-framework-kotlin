@@ -13,11 +13,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: Setup Android SDK
-        uses: actions/setup-android@v2
+        uses: android-actions/setup-android@v2
       - name: Run ktlint
         run: ./gradlew :ariesframework:ktlintCheck || true
       - name: Checkstyle
-        uses: actions/checkstyle-github-action@v1.2
+        uses: jwgmeligmeyling/checkstyle-github-action@v1.2
         with:
           name: ktlint Report
           path: 'ariesframework/build/reports/ktlint/**/*.xml'
