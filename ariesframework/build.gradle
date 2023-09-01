@@ -1,0 +1,76 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '1.8.10'
+    id "org.jlleitschuh.gradle.ktlint" version '11.4.2'
+    id 'de.undercouch.download' version '5.4.0'
+}
+
+task downloadIndyLibs(type: Download) {
+    src 'https://github.com/naver/indy-sdk/releases/download/v1.16.0/jniLibs.zip'
+    dest new File(buildDir, 'tmp/jniLibs.zip')
+    onlyIfModified true
+}
+task unzipIndyLibs(type: Copy) {
+    dependsOn downloadIndyLibs
+    from zipTree(tasks.downloadIndyLibs.dest)
+    into 'src/main'
+}
+preBuild.dependsOn unzipIndyLibs
+
+android {
+    namespace 'org.hyperledger.ariesframework'
+    compileSdk 33
+
+    defaultConfig {
+        minSdk 24
+        targetSdk 33
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = '11'
+    }
+}
+
+ktlint {
+    version = "0.49.1"
+    reporters {
+        reporter "checkstyle"
+    }
+}
+
+dependencies {
+    implementation ('org.hyperledger:indy:1.16.0') {
+        exclude group: 'net.java.dev.jna', module: 'jna'
+    }
+    implementation 'net.java.dev.jna:jna:5.8.0@aar'
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0"
+    implementation 'org.slf4j:slf4j-api:1.7.32'
+    implementation 'ch.qos.logback:logback-classic:1.2.6'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.7.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-datetime:0.4.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+
+    implementation 'androidx.core:core-ktx:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.8.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.0"
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.0"
+}
