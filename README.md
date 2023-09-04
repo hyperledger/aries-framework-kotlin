@@ -23,7 +23,7 @@ Aries Framework Kotlin supports most of [AIP 1.0](https://github.com/hyperledger
 
 ## Requirements & Installation
 
-Aries Framework Kotlin requires Android 7.0+. Is is not yet available on Maven Central.
+Aries Framework Kotlin requires Android 7.0+. It is not available on Maven Central yet.
 
 Clone this repo and add a dependency to your app's build.gradle file:
 ```groovy
@@ -38,7 +38,22 @@ dependencies {
     implementation ('org.hyperledger:indy:1.16.0') {
         exclude group: 'net.java.dev.jna', module: 'jna'
     }
-    implementation 'net.java.dev.jna:jna:5.8.0@aar'}
+    implementation 'net.java.dev.jna:jna:5.8.0@aar'
+}
+```
+
+You need additional dependencies if you include the framework as an AAR file:
+```groovy
+dependencies {
+    implementation files('path_to_aar_file')
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0"
+    implementation 'org.slf4j:slf4j-api:1.7.32'
+    implementation 'ch.qos.logback:logback-classic:1.2.6'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.7.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-datetime:0.4.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+}
 ```
 
 ## Usage
