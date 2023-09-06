@@ -4,6 +4,7 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization' version '1.8.10'
     id "org.jlleitschuh.gradle.ktlint" version '11.4.2'
     id 'de.undercouch.download' version '5.4.0'
+    id 'maven-publish'
 }
 
 task downloadIndyLibs(type: Download) {
@@ -17,6 +18,7 @@ task unzipIndyLibs(type: Copy) {
     into 'src/main'
 }
 preBuild.dependsOn unzipIndyLibs
+runKtlintCheckOverMainSourceSet.dependsOn unzipIndyLibs
 
 android {
     namespace 'org.hyperledger.ariesframework'
@@ -42,6 +44,11 @@ android {
     }
     kotlinOptions {
         jvmTarget = '11'
+    }
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
     }
 }
 
@@ -73,4 +80,17 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.0"
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId 'org.hyperledger'
+                artifactId 'aries-framework-kotlin'
+                version '1.0.0'
+            }
+        }
+    }
 }
