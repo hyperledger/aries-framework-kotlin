@@ -60,7 +60,7 @@ class CredentialDetailFragment : Fragment() {
                         lifecycleScope.launch(Dispatchers.IO) {
                             // Get application context from activity
                             val app = activity.application as WalletApp
-                            app.agent!!.deleteCredential(credId)
+                            app.agent.deleteCredential(credId)
                             activity.runOnUiThread {
                                 dialog.dismiss()
                                 activity.finish()

@@ -117,7 +117,7 @@ Subscribe to agent.eventBus to receive events from the agent and use `agent.cred
 ```kotlin
     private fun subscribeEvents() {
         val app = application as WalletApp
-        app.agent!!.eventBus.subscribe<AgentEvents.CredentialEvent> {
+        app.agent.eventBus.subscribe<AgentEvents.CredentialEvent> {
             lifecycleScope.launch(Dispatchers.Main) {
                 if (it.record.state == CredentialState.OfferReceived) {
                     getCredential(it.record.id)
@@ -126,7 +126,7 @@ Subscribe to agent.eventBus to receive events from the agent and use `agent.cred
                 }
             }
         }
-        app.agent!!.eventBus.subscribe<AgentEvents.ProofEvent> {
+        app.agent.eventBus.subscribe<AgentEvents.ProofEvent> {
             lifecycleScope.launch(Dispatchers.Main) {
                 if (it.record.state == ProofState.RequestReceived) {
                     sendProof(it.record.id)
@@ -141,7 +141,7 @@ Subscribe to agent.eventBus to receive events from the agent and use `agent.cred
         val app = application as WalletApp
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                app.agent!!.credentials.acceptOffer(
+                app.agent.credentials.acceptOffer(
                     AcceptOfferOptions(credentialRecordId = id, autoAcceptCredential = AutoAcceptCredential.Always),
                 )
             } catch (e: Exception) {
@@ -156,9 +156,9 @@ Subscribe to agent.eventBus to receive events from the agent and use `agent.cred
         val app = application as WalletApp
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val retrievedCredentials = app.agent!!.proofs.getRequestedCredentialsForProofRequest(id)
-                val requestedCredentials = app.agent!!.proofService.autoSelectCredentialsForProofRequest(retrievedCredentials)
-                app.agent!!.proofs.acceptRequest(id, requestedCredentials)
+                val retrievedCredentials = app.agent.proofs.getRequestedCredentialsForProofRequest(id)
+                val requestedCredentials = app.agent.proofService.autoSelectCredentialsForProofRequest(retrievedCredentials)
+                app.agent.proofs.acceptRequest(id, requestedCredentials)
             } catch (e: Exception) {
                 lifecycleScope.launch(Dispatchers.Main) {
                     showAlert("Failed to present proof.")

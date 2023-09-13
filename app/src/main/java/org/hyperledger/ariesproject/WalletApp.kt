@@ -18,7 +18,7 @@ const val PREFERENCE_NAME = "aries-framework-kotlin-sample"
 const val genesisPath = "bcovrin-genesis.txn"
 
 class WalletApp : Application() {
-    var agent: Agent? = null
+    lateinit var agent: Agent
     var walletOpened: Boolean = false
 
     private fun copyResourceFile(resource: String) {
@@ -51,7 +51,7 @@ class WalletApp : Application() {
             autoAcceptProof = AutoAcceptProof.Never,
         )
         agent = Agent(applicationContext, config)
-        agent!!.initialize()
+        agent.initialize()
 
         walletOpened = true
         Log.d("demo", "Agent initialized")

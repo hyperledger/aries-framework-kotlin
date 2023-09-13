@@ -48,7 +48,7 @@ class WalletMainActivity : AppCompatActivity() {
             if (invitation.isNotEmpty()) {
                 val app = application as WalletApp
                 lifecycleScope.launch(Dispatchers.Main) {
-                    val (_, connection) = app.agent!!.oob.receiveInvitationFromUrl(invitation)
+                    val (_, connection) = app.agent.oob.receiveInvitationFromUrl(invitation)
                     showAlert("Connected to ${connection?.theirLabel ?: "unknown agent"}")
                 }
             }
@@ -62,7 +62,7 @@ class WalletMainActivity : AppCompatActivity() {
 
     private fun subscribeEvents() {
         val app = application as WalletApp
-        app.agent!!.eventBus.subscribe<AgentEvents.CredentialEvent> {
+        app.agent.eventBus.subscribe<AgentEvents.CredentialEvent> {
             lifecycleScope.launch(Dispatchers.Main) {
                 if (it.record.state == CredentialState.OfferReceived) {
                     runOnConfirm("Accept credential?", action = {
@@ -76,7 +76,7 @@ class WalletMainActivity : AppCompatActivity() {
                 }
             }
         }
-        app.agent!!.eventBus.subscribe<AgentEvents.ProofEvent> {
+        app.agent.eventBus.subscribe<AgentEvents.ProofEvent> {
             lifecycleScope.launch(Dispatchers.Main) {
                 if (it.record.state == ProofState.RequestReceived) {
                     runOnConfirm("Accept proof request?", action = {
@@ -91,7 +91,7 @@ class WalletMainActivity : AppCompatActivity() {
             }
         }
         // Show an alert on basic message, this is useful for debugging.
-        app.agent!!.eventBus.subscribe<AgentEvents.BasicMessageEvent> {
+        app.agent.eventBus.subscribe<AgentEvents.BasicMessageEvent> {
             lifecycleScope.launch(Dispatchers.Main) {
                 showAlert("${it.message}")
             }
@@ -157,7 +157,7 @@ class WalletMainActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                app.agent!!.credentials.declineOffer(
+                app.agent.credentials.declineOffer(
                     AcceptOfferOptions(
                         credentialRecordId = id,
                         autoAcceptCredential = AutoAcceptCredential.Never,
@@ -177,7 +177,7 @@ class WalletMainActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                app.agent!!.proofs.declineRequest(id)
+                app.agent.proofs.declineRequest(id)
             } catch (e: Exception) {
                 lifecycleScope.launch(Dispatchers.Main) {
                     Log.d("demo", e.localizedMessage)
@@ -195,7 +195,7 @@ class WalletMainActivity : AppCompatActivity() {
 
         val job = lifecycleScope.launch(Dispatchers.IO) {
             try {
-                app.agent!!.credentials.acceptOffer(
+                app.agent.credentials.acceptOffer(
                     AcceptOfferOptions(credentialRecordId = id, autoAcceptCredential = AutoAcceptCredential.Always),
                 )
             } catch (e: Exception) {
@@ -222,9 +222,9 @@ class WalletMainActivity : AppCompatActivity() {
 
         val job = lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val retrievedCredentials = app.agent!!.proofs.getRequestedCredentialsForProofRequest(id)
-                val requestedCredentials = app.agent!!.proofService.autoSelectCredentialsForProofRequest(retrievedCredentials)
-                app.agent!!.proofs.acceptRequest(id, requestedCredentials)
+                val retrievedCredentials = app.agent.proofs.getRequestedCredentialsForProofRequest(id)
+                val requestedCredentials = app.agent.proofService.autoSelectCredentialsForProofRequest(retrievedCredentials)
+                app.agent.proofs.acceptRequest(id, requestedCredentials)
             } catch (e: Exception) {
                 lifecycleScope.launch(Dispatchers.Main) {
                     Log.d("demo", e.localizedMessage)
@@ -249,7 +249,7 @@ class WalletMainActivity : AppCompatActivity() {
                 try {
                     val qrcodeData = data!!.getStringExtra("qrcode")
                     Log.d("demo", "Scanned code: $qrcodeData")
-                    val (_, connection) = app.agent!!.oob.receiveInvitationFromUrl(qrcodeData!!)
+                    val (_, connection) = app.agent.oob.receiveInvitationFromUrl(qrcodeData!!)
                     showAlert("Connected to ${connection?.theirLabel ?: "unknown agent"}")
                 } catch (e: Exception) {
                     Log.d("demo", e.localizedMessage)
