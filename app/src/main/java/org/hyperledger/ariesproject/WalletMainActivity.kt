@@ -30,6 +30,7 @@ class WalletMainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityWalletMainBinding
     private var credentialProgress: ProgressDialog? = null
     private var proofProgress: ProgressDialog? = null
+    private val TAG = "WalletMainActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,6 +86,12 @@ class WalletMainActivity : AppCompatActivity() {
                 }
             }
         }
+        // Show an alert on basic message, this is useful for debugging.
+        app.agent!!.eventBus.subscribe<AgentEvents.BasicMessageEvent> {
+            lifecycleScope.launch(Dispatchers.Main) {
+                showAlert("${it.message}")
+            }
+        }
     }
 
     private fun showAlert(message: String) {
@@ -115,7 +122,14 @@ class WalletMainActivity : AppCompatActivity() {
             override fun onTick(millisUntilFinished: Long) {
                 if (app.walletOpened) {
                     subscribeEvents()
-                    progress.dismiss()
+                    // This causes a crash:
+                    // java.lang.IllegalArgumentException: View=DecorView@39d4aa3[Initializing agent] not attached to window manager
+                    // for now we just catch the exception
+                    try {
+                        progress.dismiss()
+                    } catch (e: Exception) {
+                        Log.d(TAG, e.message ?: "Unknown error")
+                    }
                     cancel()
                 }
             }

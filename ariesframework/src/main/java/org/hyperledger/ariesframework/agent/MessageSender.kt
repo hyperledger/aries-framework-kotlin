@@ -5,6 +5,7 @@ import org.hyperledger.ariesframework.OutboundMessage
 import org.hyperledger.ariesframework.OutboundPackage
 import org.hyperledger.ariesframework.agent.decorators.ThreadDecorator
 import org.hyperledger.ariesframework.agent.decorators.TransportDecorator
+import org.hyperledger.ariesframework.connection.messages.TrustPingMessage
 import org.hyperledger.ariesframework.connection.models.ConnectionRole
 import org.hyperledger.ariesframework.connection.models.didauth.DidComm
 import org.hyperledger.ariesframework.connection.models.didauth.DidCommService
@@ -36,6 +37,14 @@ class MessageSender(val agent: Agent) {
 
     private fun decorateMessage(message: OutboundMessage): AgentMessage {
         val agentMessage = message.payload
+        // If the agent is initialized, and the message is a TrustPing message, set the transport to "all".
+        // This enables the agent to receive undelivered messages from the mediator.
+        // For this to work, requestResponse must be set to false. The mediator will only return queued
+        // messages if the trust ping message doesn't expect a response.
+        // This is tested with aca-py mediator 0.4.x
+        if(agent.isInitialized() && agentMessage.type == TrustPingMessage.type) {
+            agentMessage.transport = TransportDecorator("all")
+        }
         if (
             agentMessage.transport == null &&
             agentMessage.requestResponse() &&

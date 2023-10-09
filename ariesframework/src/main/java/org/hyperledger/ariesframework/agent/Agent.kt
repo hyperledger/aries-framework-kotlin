@@ -3,6 +3,7 @@ package org.hyperledger.ariesframework.agent
 import android.content.Context
 import android.system.Os
 import org.hyperledger.ariesframework.EncryptedMessage
+import org.hyperledger.ariesframework.basicmessage.BasicMessageCommand
 import org.hyperledger.ariesframework.connection.ConnectionCommand
 import org.hyperledger.ariesframework.connection.ConnectionService
 import org.hyperledger.ariesframework.connection.repository.ConnectionRepository
@@ -43,6 +44,7 @@ class Agent(val context: Context, val agentConfig: AgentConfig) {
     val proofRepository = ProofRepository(this)
     val proofService = ProofService(this)
     val proofs = ProofCommand(this, dispatcher)
+    val basicMessages = BasicMessageCommand(this, dispatcher)
 
     private var _isInitialized = false
 
