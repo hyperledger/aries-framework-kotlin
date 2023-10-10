@@ -12,7 +12,7 @@ class BasicMessageHandler(val agent: Agent) : MessageHandler {
 
     override suspend fun handle(messageContext: InboundMessageContext): OutboundMessage? {
         val message = messageContext.message as BasicMessage
-        agent.eventBus.publish(AgentEvents.BasicMessageEvent(message.content));
+        agent.eventBus.publish(AgentEvents.BasicMessageEvent(message.content))
         return null
     }
 }

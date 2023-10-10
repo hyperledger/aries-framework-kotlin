@@ -42,7 +42,7 @@ class MessageSender(val agent: Agent) {
         // For this to work, requestResponse must be set to false. The mediator will only return queued
         // messages if the trust ping message doesn't expect a response.
         // This is tested with aca-py mediator 0.4.x
-        if(agent.isInitialized() && agentMessage.type == TrustPingMessage.type) {
+        if (agent.isInitialized() && agentMessage.type == TrustPingMessage.type) {
             agentMessage.transport = TransportDecorator("all")
         }
         if (
