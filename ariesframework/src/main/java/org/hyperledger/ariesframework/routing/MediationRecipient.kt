@@ -178,7 +178,10 @@ class MediationRecipient(private val agent: Agent, private val dispatcher: Dispa
             val message = OutboundMessage(BatchPickupMessage(10), mediatorConnection)
             agent.messageSender.send(message)
         } else if (agent.agentConfig.mediatorPickupStrategy == MediatorPickupStrategy.Implicit) {
-            val message = OutboundMessage(TrustPingMessage("pickup", true), mediatorConnection)
+            // For implicit pickup, responseRequested must be set to false.
+            // Since no response is requested, the mediator can respond with queued messages.
+            // Otherwise, it would respond with a trust ping response.
+            val message = OutboundMessage(TrustPingMessage("pickup", false), mediatorConnection)
             agent.messageSender.send(message, "ws")
         } else {
             throw RuntimeException("Unsupported mediator pickup strategy: ${agent.agentConfig.mediatorPickupStrategy}")
