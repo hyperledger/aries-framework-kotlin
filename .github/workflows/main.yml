@@ -1,7 +1,8 @@
 name: Check PR
 
 on:
-  [pull_request]
+  pull_request_target:
+    path: 'ariesframework/**'
 
 jobs:
   check_pr:
