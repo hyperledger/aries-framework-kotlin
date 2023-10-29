@@ -19,6 +19,7 @@ import org.hyperledger.ariesframework.agent.decorators.ThreadDecorator
 import org.hyperledger.ariesframework.connection.repository.ConnectionRecord
 import org.hyperledger.ariesframework.proofs.messages.PresentationAckMessage
 import org.hyperledger.ariesframework.proofs.messages.PresentationMessage
+import org.hyperledger.ariesframework.proofs.messages.PresentationProblemReportMessage
 import org.hyperledger.ariesframework.proofs.messages.RequestPresentationMessage
 import org.hyperledger.ariesframework.proofs.models.AutoAcceptProof
 import org.hyperledger.ariesframework.proofs.models.CredentialsForProof
@@ -187,6 +188,21 @@ class ProofService(val agent: Agent) {
         updateState(proofRecord, ProofState.Done)
 
         return Pair(ackMessage, proofRecord)
+    }
+
+    /**
+     * Create a ``PresentationProblemReport`` as response to a received presentation request.
+     *
+     * @param proofRecord the proof record for which to create the presentation acknowledgement.
+     * @return the presentation problem report message and an associated proof record.
+     */
+    suspend fun createProblemReport(proofRecord: ProofExchangeRecord): Pair<PresentationProblemReportMessage, ProofExchangeRecord> {
+        proofRecord.assertState(ProofState.RequestReceived)
+
+        val probMessage = PresentationProblemReportMessage(proofRecord.threadId)
+        updateState(proofRecord, ProofState.Declined)
+
+        return Pair(probMessage, proofRecord)
     }
 
     /**
