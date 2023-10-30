@@ -112,17 +112,7 @@ class Agent(val context: Context, val agentConfig: AgentConfig) {
      * Remove a specified credential from the wallet.
      */
     suspend fun deleteCredential(credentialId: String) {
-        var creds = credentialRepository.getAll()
-
-        creds.forEach {
-            val record = it
-            it.credentials.forEach {
-                if (it.credentialRecordId == credentialId) {
-                    credentialRepository.delete(record)
-                    Anoncreds.proverDeleteCredential(wallet.indyWallet, credentialId).await()
-                }
-            }
-        }
+        Anoncreds.proverDeleteCredential(wallet.indyWallet, credentialId).await()
     }
 
     suspend fun receiveMessage(encryptedMessage: EncryptedMessage) {

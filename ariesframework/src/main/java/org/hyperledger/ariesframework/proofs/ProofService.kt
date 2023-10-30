@@ -196,7 +196,7 @@ class ProofService(val agent: Agent) {
      * @param proofRecord the proof record for which to create the presentation acknowledgement.
      * @return the presentation problem report message and an associated proof record.
      */
-    suspend fun createProblemReport(proofRecord: ProofExchangeRecord): Pair<PresentationProblemReportMessage, ProofExchangeRecord> {
+    suspend fun createPresentationDeclinedProblemReport(proofRecord: ProofExchangeRecord): Pair<PresentationProblemReportMessage, ProofExchangeRecord> {
         proofRecord.assertState(ProofState.RequestReceived)
 
         val probMessage = PresentationProblemReportMessage(proofRecord.threadId)

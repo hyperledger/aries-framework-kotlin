@@ -354,7 +354,7 @@ class CredentialService(val agent: Agent) {
      * @param options options for the problem report message.
      * @return credential problem report message.
      */
-    suspend fun createProblemReport(options: AcceptOfferOptions): CredentialProblemReportMessage {
+    suspend fun createOfferDeclinedProblemReport(options: AcceptOfferOptions): CredentialProblemReportMessage {
         var credentialRecord = credentialRepository.getById(options.credentialRecordId)
         credentialRecord.assertProtocolVersion("v1")
         credentialRecord.assertState(CredentialState.OfferReceived)

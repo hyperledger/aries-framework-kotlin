@@ -100,7 +100,7 @@ class CredentialsCommand(val agent: Agent, private val dispatcher: Dispatcher) {
      * @return credential record associated with the declined credential.
      */
     suspend fun declineOffer(options: AcceptOfferOptions): CredentialExchangeRecord {
-        val message = agent.credentialService.createProblemReport(options)
+        val message = agent.credentialService.createOfferDeclinedProblemReport(options)
         var credentialRecord = agent.credentialRepository.getById(options.credentialRecordId)
         val connection = agent.connectionRepository.getById(credentialRecord.connectionId)
         agent.messageSender.send(OutboundMessage(message, connection))

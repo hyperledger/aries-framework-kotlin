@@ -108,7 +108,7 @@ class ProofCommand(val agent: Agent, private val dispatcher: Dispatcher) {
         proofRecordId: String,
     ): ProofExchangeRecord {
         val record = agent.proofRepository.getById(proofRecordId)
-        val (message, proofRecord) = agent.proofService.createProblemReport(record)
+        val (message, proofRecord) = agent.proofService.createPresentationDeclinedProblemReport(record)
 
         val connection = agent.connectionRepository.getById(record.connectionId)
         agent.messageSender.send(OutboundMessage(message, connection))
