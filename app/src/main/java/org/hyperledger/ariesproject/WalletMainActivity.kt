@@ -65,9 +65,11 @@ class WalletMainActivity : AppCompatActivity() {
         app.agent!!.eventBus.subscribe<AgentEvents.CredentialEvent> {
             lifecycleScope.launch(Dispatchers.Main) {
                 if (it.record.state == CredentialState.OfferReceived) {
-                    runOnConfirm("Accept credential?") {
+                    runOnConfirm("Accept credential?", action = {
                         getCredential(it.record.id)
-                    }
+                    }, negAction = {
+                        declineCredential(it.record.id)
+                    })
                 } else if (it.record.state == CredentialState.Done) {
                     credentialProgress?.dismiss()
                     showAlert("Credential received")
@@ -77,9 +79,11 @@ class WalletMainActivity : AppCompatActivity() {
         app.agent!!.eventBus.subscribe<AgentEvents.ProofEvent> {
             lifecycleScope.launch(Dispatchers.Main) {
                 if (it.record.state == ProofState.RequestReceived) {
-                    runOnConfirm("Accept proof request?") {
+                    runOnConfirm("Accept proof request?", action = {
                         sendProof(it.record.id)
-                    }
+                    }, negAction = {
+                        declineProof(it.record.id)
+                    })
                 } else if (it.record.state == ProofState.Done) {
                     proofProgress?.dismiss()
                     showAlert("Proof done")
@@ -101,14 +105,20 @@ class WalletMainActivity : AppCompatActivity() {
         builder.create().show()
     }
 
-    private fun runOnConfirm(message: String, action: () -> Unit) {
+    private fun runOnConfirm(message: String, action: () -> Unit, negAction: () -> Unit) {
         val builder = AlertDialog.Builder(this@WalletMainActivity)
         builder.setMessage(message)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 action()
             }
-            .setNegativeButton(android.R.string.cancel) { _, _ -> }
+            .setNegativeButton(android.R.string.cancel) { _, _ ->
+                negAction()
+            }
         builder.create().show()
+    }
+
+    private fun runOnConfirm(message: String, action: () -> Unit) {
+        runOnConfirm(message, action) {}
     }
 
     private fun waitForAgentInitialze() {
@@ -140,6 +150,41 @@ class WalletMainActivity : AppCompatActivity() {
             }
         }
         timer.start()
+    }
+
+    private fun declineCredential(id: String) {
+        val app = application as WalletApp
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                app.agent!!.credentials.declineOffer(
+                    AcceptOfferOptions(
+                        credentialRecordId = id,
+                        autoAcceptCredential = AutoAcceptCredential.Never,
+                    ),
+                )
+            } catch (e: Exception) {
+                lifecycleScope.launch(Dispatchers.Main) {
+                    Log.d("demo", e.localizedMessage)
+                    showAlert("Failed to decline a credential.")
+                }
+            }
+        }
+    }
+
+    private fun declineProof(id: String) {
+        val app = application as WalletApp
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                app.agent!!.proofs.declineRequest(id)
+            } catch (e: Exception) {
+                lifecycleScope.launch(Dispatchers.Main) {
+                    Log.d("demo", e.localizedMessage)
+                    showAlert("Failed to decline a proof.")
+                }
+            }
+        }
     }
 
     private fun getCredential(id: String) {

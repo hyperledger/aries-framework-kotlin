@@ -11,6 +11,7 @@ import org.hyperledger.ariesframework.proofs.handlers.PresentationHandler
 import org.hyperledger.ariesframework.proofs.handlers.RequestPresentationHandler
 import org.hyperledger.ariesframework.proofs.messages.PresentationAckMessage
 import org.hyperledger.ariesframework.proofs.messages.PresentationMessage
+import org.hyperledger.ariesframework.proofs.messages.PresentationProblemReportMessage
 import org.hyperledger.ariesframework.proofs.messages.RequestPresentationMessage
 import org.hyperledger.ariesframework.proofs.models.AutoAcceptProof
 import org.hyperledger.ariesframework.proofs.models.ProofRequest
@@ -37,6 +38,7 @@ class ProofCommand(val agent: Agent, private val dispatcher: Dispatcher) {
         MessageSerializer.registerMessage(RequestPresentationMessage.type, RequestPresentationMessage::class)
         MessageSerializer.registerMessage(PresentationMessage.type, PresentationMessage::class)
         MessageSerializer.registerMessage(PresentationAckMessage.type, PresentationAckMessage::class)
+        MessageSerializer.registerMessage(PresentationProblemReportMessage.type, PresentationProblemReportMessage::class)
     }
 
     /**
@@ -88,6 +90,25 @@ class ProofCommand(val agent: Agent, private val dispatcher: Dispatcher) {
             requestedCredentials,
             comment,
         )
+
+        val connection = agent.connectionRepository.getById(record.connectionId)
+        agent.messageSender.send(OutboundMessage(message, connection))
+
+        return proofRecord
+    }
+
+    /**
+     * Decline a presentation request as prover (by sending a problem report message) to the connection
+     * associated with the proof record.
+     *
+     * @param proofRecordId the id of the proof record for which to decline the request.
+     * @return proof record associated with the sent presentation request message.
+     */
+    suspend fun declineRequest(
+        proofRecordId: String,
+    ): ProofExchangeRecord {
+        val record = agent.proofRepository.getById(proofRecordId)
+        val (message, proofRecord) = agent.proofService.createPresentationDeclinedProblemReport(record)
 
         val connection = agent.connectionRepository.getById(record.connectionId)
         agent.messageSender.send(OutboundMessage(message, connection))

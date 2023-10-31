@@ -15,6 +15,7 @@ import org.hyperledger.ariesframework.agent.MessageSerializer
 import org.hyperledger.ariesframework.agent.decorators.Attachment
 import org.hyperledger.ariesframework.agent.decorators.ThreadDecorator
 import org.hyperledger.ariesframework.credentials.messages.CredentialAckMessage
+import org.hyperledger.ariesframework.credentials.messages.CredentialProblemReportMessage
 import org.hyperledger.ariesframework.credentials.messages.IssueCredentialMessage
 import org.hyperledger.ariesframework.credentials.messages.OfferCredentialMessage
 import org.hyperledger.ariesframework.credentials.messages.ProposeCredentialMessage
@@ -345,6 +346,22 @@ class CredentialService(val agent: Agent) {
         updateState(credentialRecord, CredentialState.Done)
 
         return CredentialAckMessage(credentialRecord.threadId, AckStatus.OK)
+    }
+
+    /**
+     * Create an ``CredentialProblemReportMessage`` as response to a received offer.
+     *
+     * @param options options for the problem report message.
+     * @return credential problem report message.
+     */
+    suspend fun createOfferDeclinedProblemReport(options: AcceptOfferOptions): CredentialProblemReportMessage {
+        var credentialRecord = credentialRepository.getById(options.credentialRecordId)
+        credentialRecord.assertProtocolVersion("v1")
+        credentialRecord.assertState(CredentialState.OfferReceived)
+
+        updateState(credentialRecord, CredentialState.Declined)
+
+        return CredentialProblemReportMessage(credentialRecord.threadId)
     }
 
     /**

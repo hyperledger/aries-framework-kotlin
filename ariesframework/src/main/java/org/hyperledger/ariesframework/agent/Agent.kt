@@ -2,6 +2,7 @@ package org.hyperledger.ariesframework.agent
 
 import android.content.Context
 import android.system.Os
+import kotlinx.coroutines.future.await
 import org.hyperledger.ariesframework.EncryptedMessage
 import org.hyperledger.ariesframework.basicmessage.BasicMessageCommand
 import org.hyperledger.ariesframework.connection.ConnectionCommand
@@ -21,6 +22,7 @@ import org.hyperledger.ariesframework.proofs.repository.ProofRepository
 import org.hyperledger.ariesframework.routing.MediationRecipient
 import org.hyperledger.ariesframework.storage.DidCommMessageRepository
 import org.hyperledger.ariesframework.wallet.Wallet
+import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 
 class Agent(val context: Context, val agentConfig: AgentConfig) {
     val wallet: Wallet = Wallet(this)
@@ -104,6 +106,13 @@ class Agent(val context: Context, val agentConfig: AgentConfig) {
         }
         wallet.delete()
         ledgerService.delete()
+    }
+
+    /**
+     * Remove a specified credential from the wallet.
+     */
+    suspend fun deleteCredential(credentialId: String) {
+        Anoncreds.proverDeleteCredential(wallet.indyWallet, credentialId).await()
     }
 
     suspend fun receiveMessage(encryptedMessage: EncryptedMessage) {

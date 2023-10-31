@@ -11,6 +11,7 @@ import org.hyperledger.ariesframework.credentials.handlers.IssueCredentialHandle
 import org.hyperledger.ariesframework.credentials.handlers.OfferCredentialHandler
 import org.hyperledger.ariesframework.credentials.handlers.RequestCredentialHandler
 import org.hyperledger.ariesframework.credentials.messages.CredentialAckMessage
+import org.hyperledger.ariesframework.credentials.messages.CredentialProblemReportMessage
 import org.hyperledger.ariesframework.credentials.messages.IssueCredentialMessage
 import org.hyperledger.ariesframework.credentials.messages.OfferCredentialMessage
 import org.hyperledger.ariesframework.credentials.messages.ProposeCredentialMessage
@@ -20,7 +21,6 @@ import org.hyperledger.ariesframework.credentials.models.AcceptOfferOptions
 import org.hyperledger.ariesframework.credentials.models.AcceptRequestOptions
 import org.hyperledger.ariesframework.credentials.models.CreateOfferOptions
 import org.hyperledger.ariesframework.credentials.models.CreateProposalOptions
-import org.hyperledger.ariesframework.credentials.models.CredentialState
 import org.hyperledger.ariesframework.credentials.repository.CredentialExchangeRecord
 import org.slf4j.LoggerFactory
 
@@ -45,6 +45,7 @@ class CredentialsCommand(val agent: Agent, private val dispatcher: Dispatcher) {
         MessageSerializer.registerMessage(OfferCredentialMessage.type, OfferCredentialMessage::class)
         MessageSerializer.registerMessage(ProposeCredentialMessage.type, ProposeCredentialMessage::class)
         MessageSerializer.registerMessage(RequestCredentialMessage.type, RequestCredentialMessage::class)
+        MessageSerializer.registerMessage(CredentialProblemReportMessage.type, CredentialProblemReportMessage::class)
     }
 
     /**
@@ -93,16 +94,16 @@ class CredentialsCommand(val agent: Agent, private val dispatcher: Dispatcher) {
     }
 
     /**
-     * Declines an offer as holder
+     * Declines a credential offer as holder (by sending a problem report message) to the connection
      *
-     * @param credentialRecordId the id of the credential to be declined.
-     * @return credential record that was declined.
+     * @param options options to decline the offer.
+     * @return credential record associated with the declined credential.
      */
-    suspend fun declineOffer(credentialRecordId: String): CredentialExchangeRecord {
-        var credentialRecord = agent.credentialRepository.getById(credentialRecordId)
-        credentialRecord.assertState(CredentialState.OfferReceived)
-        agent.credentialService.updateState(credentialRecord, CredentialState.Declined)
-
+    suspend fun declineOffer(options: AcceptOfferOptions): CredentialExchangeRecord {
+        val message = agent.credentialService.createOfferDeclinedProblemReport(options)
+        var credentialRecord = agent.credentialRepository.getById(options.credentialRecordId)
+        val connection = agent.connectionRepository.getById(credentialRecord.connectionId)
+        agent.messageSender.send(OutboundMessage(message, connection))
         return credentialRecord
     }
 

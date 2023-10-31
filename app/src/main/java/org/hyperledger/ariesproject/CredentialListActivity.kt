@@ -28,7 +28,10 @@ class CredentialListActivity : AppCompatActivity() {
         binding.toolbar.title = title
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+    }
 
+    override fun onResume() {
+        super.onResume()
         setupRecyclerView(binding.credentialList.credentialList)
     }
 
