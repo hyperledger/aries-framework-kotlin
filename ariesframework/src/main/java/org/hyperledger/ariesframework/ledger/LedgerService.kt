@@ -115,22 +115,22 @@ class LedgerService(val agent: Agent) {
 
     suspend fun getRevocationRegistryDelta(
         id: String,
-        to: Int = (System.currentTimeMillis() / 1000L) as Int,
+        to: Int = (System.currentTimeMillis() / 1000L).toInt(),
         from: Int = 0,
     ): Pair<String, Int> {
         logger.debug("Get RevocationRegistryDelta with id: $id")
-        val request = Ledger.buildGetRevocRegDeltaRequest(null, id, from as Long, to as Long).await()
+        val request = Ledger.buildGetRevocRegDeltaRequest(null, id, from.toLong(), to.toLong()).await()
         val response = submitReadRequest(request!!)
         val revocationRegistryDelta = Ledger.parseGetRevocRegDeltaResponse(response).await()
-        return Pair(revocationRegistryDelta.objectJson, revocationRegistryDelta.timestamp as Int)
+        return Pair(revocationRegistryDelta.objectJson, revocationRegistryDelta.timestamp.toInt())
     }
 
     suspend fun getRevocationRegistry(id: String, timestamp: Int): Pair<String, Int> {
         logger.debug("Get RevocationRegistry with id: $id, timestamp: $timestamp")
-        val request = Ledger.buildGetRevocRegRequest(null, id, timestamp as Long).await()
+        val request = Ledger.buildGetRevocRegRequest(null, id, timestamp.toLong()).await()
         val response = submitReadRequest(request!!)
         val revocationRegistry = Ledger.parseGetRevocRegResponse(response).await()
-        return Pair(revocationRegistry.objectJson, revocationRegistry.timestamp as Int)
+        return Pair(revocationRegistry.objectJson, revocationRegistry.timestamp.toInt())
     }
 
     private fun validateResponse(response: String) {
