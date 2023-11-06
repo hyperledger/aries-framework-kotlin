@@ -111,7 +111,7 @@ class RevocationService(val agent: Agent) {
                     tailsReader.blobStorageReaderHandle,
                     revocationRegistryDefinition,
                     revocationRegistryDelta,
-                    deltaTimestamp as Long,
+                    deltaTimestamp.toLong(),
                     credentialRevocationId,
                 ).await()
                 val revocationState = Json.decodeFromString<JsonObject>(revocationStateJson)

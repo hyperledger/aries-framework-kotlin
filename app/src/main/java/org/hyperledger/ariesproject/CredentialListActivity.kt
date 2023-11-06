@@ -46,7 +46,7 @@ class CredentialListActivity : AppCompatActivity() {
 
     private fun setupRecyclerView(recyclerView: RecyclerView) {
         val app = application as WalletApp
-        val credentials = Anoncreds.proverGetCredentials(app.agent!!.wallet.indyWallet, "{}").get()
+        val credentials = Anoncreds.proverGetCredentials(app.agent.wallet.indyWallet, "{}").get()
         recyclerView.adapter = SimpleItemRecyclerViewAdapter(this, JSONArray(credentials))
     }
 
