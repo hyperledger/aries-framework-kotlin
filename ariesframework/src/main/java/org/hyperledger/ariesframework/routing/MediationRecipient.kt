@@ -179,8 +179,6 @@ class MediationRecipient(private val agent: Agent, private val dispatcher: Dispa
             try {
                 agent.messageSender.send(message)
             } catch (e: Exception) {
-                // We catch the exception here because if there is a network failure
-                // the framework will simply retry picking up the messages later.
                 logger.debug("Pickup messages failed with the following error: ${e.message}")
             }
         } else if (agent.agentConfig.mediatorPickupStrategy == MediatorPickupStrategy.Implicit) {
@@ -189,8 +187,6 @@ class MediationRecipient(private val agent: Agent, private val dispatcher: Dispa
             // Otherwise, it would respond with a trust ping response.
             val message = OutboundMessage(TrustPingMessage("pickup", false), mediatorConnection)
             try {
-                // We catch the exception here because if there is a network failure
-                // the framework will simply retry picking up the messages later.
                 agent.messageSender.send(message, "ws")
             } catch (e: Exception) {
                 logger.debug("Pickup messages failed with the following error: ${e.message}")
