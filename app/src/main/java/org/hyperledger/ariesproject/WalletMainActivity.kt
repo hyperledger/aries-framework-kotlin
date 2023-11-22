@@ -100,6 +100,20 @@ class WalletMainActivity : AppCompatActivity() {
                 showAlert("${it.message}")
             }
         }
+
+        // Show an alert on credential problem report
+        app.agent.eventBus.subscribe<AgentEvents.CredentialProblemReportEvent> {
+            lifecycleScope.launch(Dispatchers.Main) {
+                showAlert("Issuer reported a problem while issuing the credential - ${it.message.description.en}")
+            }
+        }
+
+        // Show an alert on presentation problem report
+        app.agent.eventBus.subscribe<AgentEvents.PresentationProblemReportEvent> {
+            lifecycleScope.launch(Dispatchers.Main) {
+                showAlert("Verifier reported a problem with the presentation - ${it.message.description.en}")
+            }
+        }
     }
 
     private fun showAlert(message: String) {

@@ -7,6 +7,7 @@ import org.hyperledger.ariesframework.agent.Agent
 import org.hyperledger.ariesframework.agent.Dispatcher
 import org.hyperledger.ariesframework.agent.MessageSerializer
 import org.hyperledger.ariesframework.credentials.handlers.CredentialAckHandler
+import org.hyperledger.ariesframework.credentials.handlers.CredentialProblemReportHandler
 import org.hyperledger.ariesframework.credentials.handlers.IssueCredentialHandler
 import org.hyperledger.ariesframework.credentials.handlers.OfferCredentialHandler
 import org.hyperledger.ariesframework.credentials.handlers.RequestCredentialHandler
@@ -37,6 +38,7 @@ class CredentialsCommand(val agent: Agent, private val dispatcher: Dispatcher) {
         dispatcher.registerHandler(IssueCredentialHandler(agent))
         dispatcher.registerHandler(OfferCredentialHandler(agent))
         dispatcher.registerHandler(RequestCredentialHandler(agent))
+        dispatcher.registerHandler(CredentialProblemReportHandler(agent))
     }
 
     private fun registerMessages() {
