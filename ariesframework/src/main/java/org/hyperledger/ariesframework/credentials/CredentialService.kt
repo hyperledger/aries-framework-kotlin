@@ -15,7 +15,6 @@ import org.hyperledger.ariesframework.agent.MessageSerializer
 import org.hyperledger.ariesframework.agent.decorators.Attachment
 import org.hyperledger.ariesframework.agent.decorators.ThreadDecorator
 import org.hyperledger.ariesframework.credentials.messages.CredentialAckMessage
-import org.hyperledger.ariesframework.credentials.messages.CredentialProblemReportMessage
 import org.hyperledger.ariesframework.credentials.messages.IssueCredentialMessage
 import org.hyperledger.ariesframework.credentials.messages.OfferCredentialMessage
 import org.hyperledger.ariesframework.credentials.messages.ProposeCredentialMessage
@@ -31,6 +30,7 @@ import org.hyperledger.ariesframework.credentials.models.CredentialValues
 import org.hyperledger.ariesframework.credentials.models.IndyCredential
 import org.hyperledger.ariesframework.credentials.repository.CredentialExchangeRecord
 import org.hyperledger.ariesframework.credentials.repository.CredentialRecordBinding
+import org.hyperledger.ariesframework.problemreports.messages.CredentialProblemReportMessage
 import org.hyperledger.ariesframework.storage.BaseRecord
 import org.hyperledger.ariesframework.storage.DidCommMessageRole
 import org.hyperledger.indy.sdk.anoncreds.Anoncreds

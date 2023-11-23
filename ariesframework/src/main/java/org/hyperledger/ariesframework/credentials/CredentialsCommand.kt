@@ -11,7 +11,6 @@ import org.hyperledger.ariesframework.credentials.handlers.IssueCredentialHandle
 import org.hyperledger.ariesframework.credentials.handlers.OfferCredentialHandler
 import org.hyperledger.ariesframework.credentials.handlers.RequestCredentialHandler
 import org.hyperledger.ariesframework.credentials.messages.CredentialAckMessage
-import org.hyperledger.ariesframework.credentials.messages.CredentialProblemReportMessage
 import org.hyperledger.ariesframework.credentials.messages.IssueCredentialMessage
 import org.hyperledger.ariesframework.credentials.messages.OfferCredentialMessage
 import org.hyperledger.ariesframework.credentials.messages.ProposeCredentialMessage
@@ -45,7 +44,6 @@ class CredentialsCommand(val agent: Agent, private val dispatcher: Dispatcher) {
         MessageSerializer.registerMessage(OfferCredentialMessage.type, OfferCredentialMessage::class)
         MessageSerializer.registerMessage(ProposeCredentialMessage.type, ProposeCredentialMessage::class)
         MessageSerializer.registerMessage(RequestCredentialMessage.type, RequestCredentialMessage::class)
-        MessageSerializer.registerMessage(CredentialProblemReportMessage.type, CredentialProblemReportMessage::class)
     }
 
     /**

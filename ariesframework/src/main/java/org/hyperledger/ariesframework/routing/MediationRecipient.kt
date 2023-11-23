@@ -19,7 +19,6 @@ import org.hyperledger.ariesframework.routing.handlers.BatchHandler
 import org.hyperledger.ariesframework.routing.handlers.KeylistUpdateResponseHandler
 import org.hyperledger.ariesframework.routing.handlers.MediationDenyHandler
 import org.hyperledger.ariesframework.routing.handlers.MediationGrantHandler
-import org.hyperledger.ariesframework.routing.handlers.ProblemReportHandler
 import org.hyperledger.ariesframework.routing.messages.BatchMessage
 import org.hyperledger.ariesframework.routing.messages.BatchPickupMessage
 import org.hyperledger.ariesframework.routing.messages.KeylistUpdate
@@ -29,7 +28,6 @@ import org.hyperledger.ariesframework.routing.messages.KeylistUpdateResponseMess
 import org.hyperledger.ariesframework.routing.messages.MediationDenyMessage
 import org.hyperledger.ariesframework.routing.messages.MediationGrantMessage
 import org.hyperledger.ariesframework.routing.messages.MediationRequestMessage
-import org.hyperledger.ariesframework.routing.messages.ProblemReportMessage
 import org.hyperledger.ariesframework.routing.repository.MediationRecord
 import org.hyperledger.ariesframework.routing.repository.MediationRepository
 import org.hyperledger.ariesframework.routing.repository.MediationRole
@@ -58,7 +56,6 @@ class MediationRecipient(private val agent: Agent, private val dispatcher: Dispa
         dispatcher.registerHandler(MediationGrantHandler(agent))
         dispatcher.registerHandler(BatchHandler(agent))
         dispatcher.registerHandler(KeylistUpdateResponseHandler(agent))
-        dispatcher.registerHandler(ProblemReportHandler(agent))
     }
 
     private fun registerMessages() {
@@ -69,7 +66,6 @@ class MediationRecipient(private val agent: Agent, private val dispatcher: Dispa
         MessageSerializer.registerMessage(MediationDenyMessage.type, MediationDenyMessage::class)
         MessageSerializer.registerMessage(MediationGrantMessage.type, MediationGrantMessage::class)
         MessageSerializer.registerMessage(MediationRequestMessage.type, MediationRequestMessage::class)
-        MessageSerializer.registerMessage(ProblemReportMessage.type, ProblemReportMessage::class)
     }
 
     suspend fun getRouting(): Routing {

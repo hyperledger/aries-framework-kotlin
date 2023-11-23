@@ -11,7 +11,6 @@ import org.hyperledger.ariesframework.proofs.handlers.PresentationHandler
 import org.hyperledger.ariesframework.proofs.handlers.RequestPresentationHandler
 import org.hyperledger.ariesframework.proofs.messages.PresentationAckMessage
 import org.hyperledger.ariesframework.proofs.messages.PresentationMessage
-import org.hyperledger.ariesframework.proofs.messages.PresentationProblemReportMessage
 import org.hyperledger.ariesframework.proofs.messages.RequestPresentationMessage
 import org.hyperledger.ariesframework.proofs.models.AutoAcceptProof
 import org.hyperledger.ariesframework.proofs.models.ProofRequest
@@ -38,7 +37,6 @@ class ProofCommand(val agent: Agent, private val dispatcher: Dispatcher) {
         MessageSerializer.registerMessage(RequestPresentationMessage.type, RequestPresentationMessage::class)
         MessageSerializer.registerMessage(PresentationMessage.type, PresentationMessage::class)
         MessageSerializer.registerMessage(PresentationAckMessage.type, PresentationAckMessage::class)
-        MessageSerializer.registerMessage(PresentationProblemReportMessage.type, PresentationProblemReportMessage::class)
     }
 
     /**
