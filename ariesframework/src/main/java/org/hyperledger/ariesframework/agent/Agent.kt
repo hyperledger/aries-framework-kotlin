@@ -15,6 +15,7 @@ import org.hyperledger.ariesframework.ledger.LedgerService
 import org.hyperledger.ariesframework.oob.OutOfBandCommand
 import org.hyperledger.ariesframework.oob.OutOfBandService
 import org.hyperledger.ariesframework.oob.repository.OutOfBandRepository
+import org.hyperledger.ariesframework.problemreports.ProblemReportsCommand
 import org.hyperledger.ariesframework.proofs.ProofCommand
 import org.hyperledger.ariesframework.proofs.ProofService
 import org.hyperledger.ariesframework.proofs.RevocationService
@@ -47,6 +48,7 @@ class Agent(val context: Context, val agentConfig: AgentConfig) {
     val proofService = ProofService(this)
     val proofs = ProofCommand(this, dispatcher)
     val basicMessages = BasicMessageCommand(this, dispatcher)
+    val problemReports = ProblemReportsCommand(this, dispatcher)
 
     private var _isInitialized = false
 

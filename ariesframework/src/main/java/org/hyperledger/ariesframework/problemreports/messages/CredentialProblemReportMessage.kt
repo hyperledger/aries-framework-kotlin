@@ -1,7 +1,5 @@
-package org.hyperledger.ariesframework.credentials.messages
+package org.hyperledger.ariesframework.problemreports.messages
 import kotlinx.serialization.Serializable
-import org.hyperledger.ariesframework.agent.BaseProblemReportMessage
-import org.hyperledger.ariesframework.agent.DescriptionOptions
 import org.hyperledger.ariesframework.agent.decorators.ThreadDecorator
 
 @Serializable
@@ -15,7 +13,7 @@ class CredentialProblemReportMessage private constructor() : BaseProblemReportMe
 ) {
     constructor(threadId: String) : this() {
         thread = ThreadDecorator(threadId)
-        type = CredentialProblemReportMessage.type
+        type = Companion.type
     }
     companion object {
         const val type = "https://didcomm.org/issue-credential/1.0/problem-report"

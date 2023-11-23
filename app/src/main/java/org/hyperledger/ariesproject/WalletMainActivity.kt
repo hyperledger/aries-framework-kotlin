@@ -20,6 +20,9 @@ import org.hyperledger.ariesframework.agent.AgentEvents
 import org.hyperledger.ariesframework.credentials.models.AcceptOfferOptions
 import org.hyperledger.ariesframework.credentials.models.AutoAcceptCredential
 import org.hyperledger.ariesframework.credentials.models.CredentialState
+import org.hyperledger.ariesframework.problemreports.messages.CredentialProblemReportMessage
+import org.hyperledger.ariesframework.problemreports.messages.MediationProblemReportMessage
+import org.hyperledger.ariesframework.problemreports.messages.PresentationProblemReportMessage
 import org.hyperledger.ariesframework.proofs.models.ProofState
 import org.hyperledger.ariesproject.databinding.ActivityWalletMainBinding
 import org.hyperledger.ariesproject.databinding.MenuItemListContentBinding
@@ -102,16 +105,18 @@ class WalletMainActivity : AppCompatActivity() {
         }
 
         // Show an alert on credential problem report
-        app.agent.eventBus.subscribe<AgentEvents.CredentialProblemReportEvent> {
+        app.agent.eventBus.subscribe<AgentEvents.ProblemReportEvent> {
             lifecycleScope.launch(Dispatchers.Main) {
-                showAlert("Issuer reported a problem while issuing the credential - ${it.message.description.en}")
-            }
-        }
-
-        // Show an alert on presentation problem report
-        app.agent.eventBus.subscribe<AgentEvents.PresentationProblemReportEvent> {
-            lifecycleScope.launch(Dispatchers.Main) {
-                showAlert("Verifier reported a problem with the presentation - ${it.message.description.en}")
+                // Check if message type is a CredentialProblemReport
+                if (it.message is CredentialProblemReportMessage) {
+                    showAlert("Issuer reported a problem while issuing the credential - ${it.message.description.en}")
+                }
+                if (it.message is PresentationProblemReportMessage) {
+                    showAlert("Verifier reported a problem while verifying the presentation - ${it.message.description.en}")
+                }
+                if (it.message is MediationProblemReportMessage) {
+                    showAlert("Mediator reported a problem - ${it.message.description.en}")
+                }
             }
         }
     }

@@ -1,8 +1,6 @@
-package org.hyperledger.ariesframework.proofs.messages
+package org.hyperledger.ariesframework.problemreports.messages
 
 import kotlinx.serialization.Serializable
-import org.hyperledger.ariesframework.agent.BaseProblemReportMessage
-import org.hyperledger.ariesframework.agent.DescriptionOptions
 import org.hyperledger.ariesframework.agent.decorators.ThreadDecorator
 
 @Serializable
@@ -16,7 +14,7 @@ class PresentationProblemReportMessage private constructor() : BaseProblemReport
 ) {
     constructor(threadId: String) : this() {
         thread = ThreadDecorator(threadId)
-        type = PresentationProblemReportMessage.type
+        type = Companion.type
     }
     companion object {
         const val type = "https://didcomm.org/present-proof/1.0/problem-report"

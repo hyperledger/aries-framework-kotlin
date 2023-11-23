@@ -1,7 +1,8 @@
-package org.hyperledger.ariesframework.agent
+package org.hyperledger.ariesframework.problemreports.messages
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.hyperledger.ariesframework.agent.AgentMessage
 
 @Serializable
 data class DescriptionOptions(
@@ -19,7 +20,7 @@ open class BaseProblemReportMessage(
     open val description: DescriptionOptions,
     @SerialName("fix_hint")
     open val fixHint: FixHintOptions? = null,
-) : AgentMessage(generateId(), BaseProblemReportMessage.type) {
+) : AgentMessage(generateId(), type) {
     constructor() : this(DescriptionOptions("", ""), null) {
         throw Exception("Creating a ProblemReportMessage is not supported")
     }
