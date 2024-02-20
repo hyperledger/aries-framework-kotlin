@@ -1,12 +1,11 @@
 package org.hyperledger.ariesframework.storage
 
 import androidx.test.platform.app.InstrumentationRegistry
+import askar_uniffi.ErrorCode
 import kotlinx.coroutines.test.runTest
 import org.hyperledger.ariesframework.Tags
 import org.hyperledger.ariesframework.TestHelper
 import org.hyperledger.ariesframework.agent.Agent
-import org.hyperledger.indy.sdk.wallet.WalletItemAlreadyExistsException
-import org.hyperledger.indy.sdk.wallet.WalletItemNotFoundException
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -28,9 +27,7 @@ class RepositoryTest {
 
     @After
     fun tearDown() = runTest {
-        if (agent.wallet.indyWallet != null) {
-            agent.wallet.delete()
-        }
+        agent.reset()
     }
 
     private suspend fun insertRecord(id: String = BaseRecord.generateId(), tags: Tags? = null): TestRecord {
@@ -44,9 +41,11 @@ class RepositoryTest {
         val record = insertRecord(id = "test-id")
         try {
             repository.save(record)
-            assert(false)
-        } catch (e: WalletItemAlreadyExistsException) {
+            assert(false) { "Duplicate error expected" }
+        } catch (e: ErrorCode.Duplicate) {
             // expected
+        } catch (e: Exception) {
+            assert(false) { "Unexpected exception: $e" }
         }
     }
 
@@ -61,9 +60,11 @@ class RepositoryTest {
 
         try {
             repository.getById("not-found")
-            assert(false)
-        } catch (e: WalletItemNotFoundException) {
+            assert(false) { "NotFound error expected" }
+        } catch (e: ErrorCode.NotFound) {
             // expected
+        } catch (e: Exception) {
+            assert(false) { "Unexpected exception: $e" }
         }
     }
 
@@ -72,9 +73,11 @@ class RepositoryTest {
         var record = TestRecord(id = "test-id", _tags = mapOf("myTag" to "foobar"), foo = "test")
         try {
             repository.update(record)
-            assert(false)
-        } catch (e: WalletItemNotFoundException) {
+            assert(false) { "NotFound error expected" }
+        } catch (e: ErrorCode.NotFound) {
             // expected
+        } catch (e: Exception) {
+            assert(false) { "Unexpected exception: $e" }
         }
 
         repository.save(record)
@@ -95,9 +98,11 @@ class RepositoryTest {
         repository.delete(record)
         try {
             repository.getById(record.id)
-            assert(false)
-        } catch (e: WalletItemNotFoundException) {
+            assert(false) { "NotFound error expected" }
+        } catch (e: ErrorCode.NotFound) {
             // expected
+        } catch (e: Exception) {
+            assert(false) { "Unexpected exception: $e" }
         }
     }
 
@@ -126,17 +131,17 @@ class RepositoryTest {
     @Test
     fun testFindById() = runTest {
         val record = insertRecord()
-        val record2 = repository.getById(record.id)
+        val record2 = repository.findById(record.id)!!
         assertEquals(record.id, record2.id)
         assertEquals(record.createdAt, record2.createdAt)
         assertEquals(record.getTags(), record2.getTags())
         assertEquals(record.foo, record2.foo)
 
         try {
-            repository.getById("not-found")
-            assert(false)
-        } catch (e: WalletItemNotFoundException) {
-            // expected
+            val record3 = repository.findById("not-found")
+            assertNull(record3)
+        } catch (e: Exception) {
+            assert(false) { "findById() should not throw" }
         }
     }
 
@@ -151,9 +156,11 @@ class RepositoryTest {
         insertRecord(tags = mapOf("myTag" to "foobar")) // Insert duplicate tags
         try {
             repository.findSingleByQuery("{\"myTag\": \"foobar\"}")
-            assert(false)
-        } catch (e: Exception) {
+            assert(false) { "Should throw error when more than one record found" }
+        } catch (e: ErrorCode.Duplicate) {
             // expected
+        } catch (e: Exception) {
+            assert(false) { "Unexpected exception: $e" }
         }
     }
 
@@ -165,9 +172,11 @@ class RepositoryTest {
 
         try {
             repository.getSingleByQuery("{\"myTag\": \"notfound\"}")
-            assert(false)
-        } catch (e: Exception) {
+            assert(false) { "Should throw error when not found" }
+        } catch (e: ErrorCode.NotFound) {
             // expected
+        } catch (e: Exception) {
+            assert(false) { "Unexpected exception: $e" }
         }
     }
 }

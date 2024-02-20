@@ -18,7 +18,7 @@ data class RequestedCredentials(
     @SerialName("self_attested_attributes")
     val selfAttestedAttributes: MutableMap<String, String> = mutableMapOf(),
 ) {
-    fun getCredentialIdentifiers(): Array<String> {
+    fun getCredentialIdentifiers(): List<String> {
         val credIds = mutableSetOf<String>()
         for ((_, attr) in requestedAttributes) {
             credIds.add(attr.credentialId)
@@ -26,7 +26,7 @@ data class RequestedCredentials(
         for ((_, pred) in requestedPredicates) {
             credIds.add(pred.credentialId)
         }
-        return credIds.toTypedArray()
+        return credIds.toList()
     }
 
     fun toJsonString(): String = Json.encodeToString(this)

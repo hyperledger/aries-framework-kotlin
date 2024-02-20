@@ -1,16 +1,19 @@
 package org.hyperledger.ariesframework.agent
 
 import android.content.Context
-import android.system.Os
-import kotlinx.coroutines.future.await
+import askar_uniffi.AskarStoreManager
 import org.hyperledger.ariesframework.EncryptedMessage
+import org.hyperledger.ariesframework.anoncreds.AnoncredsService
+import org.hyperledger.ariesframework.anoncreds.storage.CredentialDefinitionRepository
+import org.hyperledger.ariesframework.anoncreds.storage.CredentialRepository
+import org.hyperledger.ariesframework.anoncreds.storage.RevocationRegistryRepository
 import org.hyperledger.ariesframework.basicmessage.BasicMessageCommand
 import org.hyperledger.ariesframework.connection.ConnectionCommand
 import org.hyperledger.ariesframework.connection.ConnectionService
 import org.hyperledger.ariesframework.connection.repository.ConnectionRepository
 import org.hyperledger.ariesframework.credentials.CredentialService
 import org.hyperledger.ariesframework.credentials.CredentialsCommand
-import org.hyperledger.ariesframework.credentials.repository.CredentialRepository
+import org.hyperledger.ariesframework.credentials.repository.CredentialExchangeRepository
 import org.hyperledger.ariesframework.ledger.LedgerService
 import org.hyperledger.ariesframework.oob.OutOfBandCommand
 import org.hyperledger.ariesframework.oob.OutOfBandService
@@ -23,7 +26,6 @@ import org.hyperledger.ariesframework.proofs.repository.ProofRepository
 import org.hyperledger.ariesframework.routing.MediationRecipient
 import org.hyperledger.ariesframework.storage.DidCommMessageRepository
 import org.hyperledger.ariesframework.wallet.Wallet
-import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 
 class Agent(val context: Context, val agentConfig: AgentConfig) {
     val wallet: Wallet = Wallet(this)
@@ -39,10 +41,14 @@ class Agent(val context: Context, val agentConfig: AgentConfig) {
     val outOfBandService = OutOfBandService(this)
     val oob = OutOfBandCommand(this, dispatcher)
     val didCommMessageRepository = DidCommMessageRepository(this)
+    val credentialExchangeRepository = CredentialExchangeRepository(this)
     val ledgerService = LedgerService(this)
-    val credentialRepository = CredentialRepository(this)
+    val credentialDefinitionRepository = CredentialDefinitionRepository(this)
+    val revocationRegistryRepository = RevocationRegistryRepository(this)
+    val anoncredsService = AnoncredsService(this)
     val credentialService = CredentialService(this)
     val credentials = CredentialsCommand(this, dispatcher)
+    val credentialRepository = CredentialRepository(this)
     val revocationService = RevocationService(this)
     val proofRepository = ProofRepository(this)
     val proofService = ProofService(this)
@@ -51,10 +57,6 @@ class Agent(val context: Context, val agentConfig: AgentConfig) {
     val problemReports = ProblemReportsCommand(this, dispatcher)
 
     private var _isInitialized = false
-
-    init {
-        Os.setenv("EXTERNAL_STORAGE", context.filesDir.absolutePath, true)
-    }
 
     /**
      * Initialize the agent. This will create a wallet if necessary and open it.
@@ -107,14 +109,6 @@ class Agent(val context: Context, val agentConfig: AgentConfig) {
             shutdown()
         }
         wallet.delete()
-        ledgerService.delete()
-    }
-
-    /**
-     * Remove a specified credential from the wallet.
-     */
-    suspend fun deleteCredential(credentialId: String) {
-        Anoncreds.proverDeleteCredential(wallet.indyWallet, credentialId).await()
     }
 
     suspend fun receiveMessage(encryptedMessage: EncryptedMessage) {
@@ -127,5 +121,14 @@ class Agent(val context: Context, val agentConfig: AgentConfig) {
      */
     fun setOutboundTransport(outboundTransport: OutboundTransport) {
         messageSender.setOutboundTransport(outboundTransport)
+    }
+
+    companion object {
+        /**
+         * Generate a key to encrypt the wallet.
+         */
+        fun generateWalletKey(): String {
+            return AskarStoreManager().generateRawStoreKey(null)
+        }
     }
 }

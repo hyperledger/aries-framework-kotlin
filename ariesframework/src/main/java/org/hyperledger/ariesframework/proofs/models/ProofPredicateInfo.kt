@@ -28,4 +28,8 @@ data class ProofPredicateInfo(
     @SerialName("p_value")
     val predicateValue: Int,
     val restrictions: List<AttributeFilter>? = null,
-)
+) {
+    fun asProofAttributeInfo(): ProofAttributeInfo {
+        return ProofAttributeInfo(name, null, nonRevoked, restrictions)
+    }
+}

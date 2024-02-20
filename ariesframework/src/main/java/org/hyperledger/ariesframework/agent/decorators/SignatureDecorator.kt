@@ -1,16 +1,16 @@
 package org.hyperledger.ariesframework.agent.decorators
 
-import kotlinx.coroutines.future.await
+import askar_uniffi.AskarKeyAlg
+import askar_uniffi.LocalKeyFactory
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.hyperledger.ariesframework.connection.models.Connection
 import org.hyperledger.ariesframework.connection.models.didauth.didDocServiceModule
 import org.hyperledger.ariesframework.decodeBase64url
 import org.hyperledger.ariesframework.encodeBase64url
+import org.hyperledger.ariesframework.util.Base58
 import org.hyperledger.ariesframework.wallet.Wallet
-import org.hyperledger.indy.sdk.crypto.Crypto
 
 @Serializable
 class SignatureDecorator(
@@ -32,7 +32,13 @@ class SignatureDecorator(
             throw Exception("Invalid signature")
         }
 
-        val isValid = Crypto.cryptoVerify(signer, signedData, signature).await()
+        val singerBytes = try {
+            Base58.decode(signer)
+        } catch (e: Exception) {
+            throw Exception("Invalid signer: $signer")
+        }
+        val signKey = LocalKeyFactory().fromPublicBytes(AskarKeyAlg.ED25519, singerBytes)
+        val isValid = signKey.verifySignature(signedData, signature, null)
         if (!isValid) {
             throw Exception("Signature verification failed")
         }
@@ -49,7 +55,9 @@ class SignatureDecorator(
     companion object {
         suspend fun signData(data: ByteArray, wallet: Wallet, verkey: String): SignatureDecorator {
             val signatureData = ByteArray(8) + data
-            val signature = Crypto.cryptoSign(wallet.indyWallet, verkey, signatureData).await()
+            val signKey = wallet.session!!.fetchKey(verkey, false)
+                ?: throw Exception("Key not found: $verkey")
+            val signature = signKey.loadLocalKey().signMessage(signatureData, null)
             val signatureType = "https://didcomm.org/signature/1.0/ed25519Sha512_single"
             val signer = verkey
             return SignatureDecorator(

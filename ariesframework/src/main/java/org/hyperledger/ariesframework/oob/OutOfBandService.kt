@@ -99,7 +99,6 @@ class OutOfBandService(val agent: Agent) {
     }
 
     suspend fun deleteById(outOfBandId: String) {
-        val outOfBandRecord = getById(outOfBandId)
-        outOfBandRepository.delete(outOfBandRecord)
+        outOfBandRepository.deleteById(outOfBandId)
     }
 }

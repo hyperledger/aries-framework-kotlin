@@ -1,6 +1,5 @@
 package org.hyperledger.ariesframework.credentials
 
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.hyperledger.ariesframework.OutboundMessage
 import org.hyperledger.ariesframework.agent.Agent
@@ -84,7 +83,7 @@ class CredentialsCommand(val agent: Agent, private val dispatcher: Dispatcher) {
      */
     suspend fun acceptOffer(options: AcceptOfferOptions): CredentialExchangeRecord {
         val message = agent.credentialService.createRequest(options)
-        val credentialRecord = agent.credentialRepository.getById(options.credentialRecordId)
+        val credentialRecord = agent.credentialExchangeRepository.getById(options.credentialRecordId)
         val connection = agent.connectionRepository.getById(credentialRecord.connectionId)
         agent.messageSender.send(OutboundMessage(message, connection))
 
@@ -99,7 +98,7 @@ class CredentialsCommand(val agent: Agent, private val dispatcher: Dispatcher) {
      */
     suspend fun declineOffer(options: AcceptOfferOptions): CredentialExchangeRecord {
         val message = agent.credentialService.createOfferDeclinedProblemReport(options)
-        var credentialRecord = agent.credentialRepository.getById(options.credentialRecordId)
+        var credentialRecord = agent.credentialExchangeRepository.getById(options.credentialRecordId)
         val connection = agent.connectionRepository.getById(credentialRecord.connectionId)
         agent.messageSender.send(OutboundMessage(message, connection))
         return credentialRecord
@@ -114,7 +113,7 @@ class CredentialsCommand(val agent: Agent, private val dispatcher: Dispatcher) {
      */
     suspend fun acceptRequest(options: AcceptRequestOptions): CredentialExchangeRecord {
         val message = agent.credentialService.createCredential(options)
-        val credentialRecord = agent.credentialRepository.getById(options.credentialRecordId)
+        val credentialRecord = agent.credentialExchangeRepository.getById(options.credentialRecordId)
         val connection = agent.connectionRepository.getById(credentialRecord.connectionId)
         agent.messageSender.send(OutboundMessage(message, connection))
 
@@ -130,7 +129,7 @@ class CredentialsCommand(val agent: Agent, private val dispatcher: Dispatcher) {
      */
     suspend fun acceptCredential(options: AcceptCredentialOptions): CredentialExchangeRecord {
         val message = agent.credentialService.createAck(options)
-        val credentialRecord = agent.credentialRepository.getById(options.credentialRecordId)
+        val credentialRecord = agent.credentialExchangeRepository.getById(options.credentialRecordId)
         val connection = agent.connectionRepository.getById(credentialRecord.connectionId)
         agent.messageSender.send(OutboundMessage(message, connection))
 

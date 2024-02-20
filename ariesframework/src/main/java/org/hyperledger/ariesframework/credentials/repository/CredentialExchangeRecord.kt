@@ -8,6 +8,7 @@ import org.hyperledger.ariesframework.Tags
 import org.hyperledger.ariesframework.credentials.models.AutoAcceptCredential
 import org.hyperledger.ariesframework.credentials.models.CredentialPreviewAttribute
 import org.hyperledger.ariesframework.credentials.models.CredentialState
+import org.hyperledger.ariesframework.credentials.models.IndyCredentialView
 import org.hyperledger.ariesframework.storage.BaseRecord
 
 @Serializable
@@ -44,6 +45,16 @@ data class CredentialExchangeRecord(
         tags["state"] = state.name
 
         return tags
+    }
+
+    fun getCredentialInfo(): IndyCredentialView? {
+        if (credentialAttributes == null) {
+            return null
+        }
+
+        val claims = credentialAttributes!!.associate { it.name to it.value }
+
+        return IndyCredentialView(claims)
     }
 
     fun assertProtocolVersion(version: String) {

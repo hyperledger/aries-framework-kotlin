@@ -10,11 +10,10 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NavUtils
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.runBlocking
+import org.hyperledger.ariesframework.anoncreds.storage.CredentialRecord
 import org.hyperledger.ariesproject.databinding.ActivityCredentialListBinding
 import org.hyperledger.ariesproject.databinding.CredentialListContentBinding
-import org.hyperledger.indy.sdk.anoncreds.Anoncreds
-import org.json.JSONArray
-import org.json.JSONObject
 
 class CredentialListActivity : AppCompatActivity() {
     private lateinit var binding: ActivityCredentialListBinding
@@ -46,18 +45,19 @@ class CredentialListActivity : AppCompatActivity() {
 
     private fun setupRecyclerView(recyclerView: RecyclerView) {
         val app = application as WalletApp
-        val credentials = Anoncreds.proverGetCredentials(app.agent.wallet.indyWallet, "{}").get()
-        recyclerView.adapter = SimpleItemRecyclerViewAdapter(this, JSONArray(credentials))
+        val credentials = runBlocking { app.agent.credentialRepository.getAll() }
+        recyclerView.adapter = SimpleItemRecyclerViewAdapter(this, credentials)
     }
 
     class SimpleItemRecyclerViewAdapter(
         private val parentActivity: CredentialListActivity,
-        private val values: JSONArray,
+        private val values: List<CredentialRecord>,
     ) : RecyclerView.Adapter<SimpleItemRecyclerViewAdapter.ViewHolder>() {
         private val onClickListener: View.OnClickListener = View.OnClickListener { v ->
-            val item = v.tag as JSONObject
+            val item = v.tag as CredentialRecord
             val intent = Intent(v.context, CredentialDetailActivity::class.java).apply {
-                putExtra(CredentialDetailFragment.ARG_CREDENTIAL, item.toString())
+                putExtra(CredentialDetailFragment.ARG_CREDENTIAL, item.credential)
+                putExtra(CredentialDetailFragment.ARG_CREDENTIAL_ID, item.credentialId)
             }
             v.context.startActivity(intent)
         }
@@ -69,8 +69,8 @@ class CredentialListActivity : AppCompatActivity() {
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val item = values[position] as JSONObject
-            holder.contentView.text = item.getString("referent")
+            val item = values[position]
+            holder.contentView.text = item.credentialId
 
             with(holder.itemView) {
                 tag = item
@@ -78,7 +78,7 @@ class CredentialListActivity : AppCompatActivity() {
             }
         }
 
-        override fun getItemCount() = values.length()
+        override fun getItemCount() = values.size
 
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             var contentBinding = CredentialListContentBinding.bind(view)

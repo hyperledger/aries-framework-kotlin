@@ -3,6 +3,7 @@ package org.hyperledger.ariesframework.agent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -13,16 +14,16 @@ import kotlin.time.Duration.Companion.seconds
 
 class EventBusTest {
     @Test
-    fun testSubscribe() = runTest {
+    fun testSubscribe() = runBlocking {
         val eventBus = EventBus()
         var count = 0
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            eventBus.subscribe<String> { assertEquals("hello", it) }
-            eventBus.subscribe<String> { count++ }
-            eventBus.subscribe<String> { count++ }
-        }
+        eventBus.subscribe<String> { assertEquals("hello", it) }
+        eventBus.subscribe<String> { count++ }
+        eventBus.subscribe<String> { count++ }
+
+        delay(0.1.seconds) // Wait for the subscribers to be registered
         eventBus.publish("hello")
-        job.cancel()
+        delay(0.1.seconds) // Wait for the subscribers to be notified
         assertEquals(2, count)
     }
 

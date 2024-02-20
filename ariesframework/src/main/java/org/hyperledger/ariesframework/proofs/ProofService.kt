@@ -1,14 +1,20 @@
 package org.hyperledger.ariesframework.proofs
 
+import anoncreds_uniffi.Credential
+import anoncreds_uniffi.CredentialDefinition
+import anoncreds_uniffi.Presentation
+import anoncreds_uniffi.PresentationRequest
+import anoncreds_uniffi.Prover
+import anoncreds_uniffi.RequestedCredential
+import anoncreds_uniffi.RevocationRegistryDefinition
+import anoncreds_uniffi.Schema
+import anoncreds_uniffi.Verifier
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.future.await
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import org.hyperledger.ariesframework.AckStatus
 import org.hyperledger.ariesframework.InboundMessageContext
 import org.hyperledger.ariesframework.agent.Agent
@@ -22,7 +28,6 @@ import org.hyperledger.ariesframework.proofs.messages.PresentationAckMessage
 import org.hyperledger.ariesframework.proofs.messages.PresentationMessage
 import org.hyperledger.ariesframework.proofs.messages.RequestPresentationMessage
 import org.hyperledger.ariesframework.proofs.models.AutoAcceptProof
-import org.hyperledger.ariesframework.proofs.models.CredentialsForProof
 import org.hyperledger.ariesframework.proofs.models.IndyCredentialInfo
 import org.hyperledger.ariesframework.proofs.models.PartialProof
 import org.hyperledger.ariesframework.proofs.models.ProofRequest
@@ -36,8 +41,8 @@ import org.hyperledger.ariesframework.proofs.repository.ProofExchangeRecord
 import org.hyperledger.ariesframework.storage.DidCommMessageRole
 import org.hyperledger.ariesframework.util.concurrentForEach
 import org.hyperledger.ariesframework.util.concurrentMap
-import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 import org.slf4j.LoggerFactory
+import kotlin.math.max
 
 class ProofService(val agent: Agent) {
     private val logger = LoggerFactory.getLogger(ProofService::class.java)
@@ -49,7 +54,7 @@ class ProofService(val agent: Agent) {
          * @return generated number as a string.
          */
         suspend fun generateProofRequestNonce(): String {
-            return Anoncreds.generateNonce().await()
+            return Verifier().generateNonce()
         }
     }
 
@@ -232,20 +237,19 @@ class ProofService(val agent: Agent) {
      */
     suspend fun getRequestedCredentialsForProofRequest(proofRequest: ProofRequest): RetrievedCredentials {
         val retrievedCredentials = RetrievedCredentials()
-        val credentialsForProof = getCredentialsForProofRequest(proofRequest)
         val lock = Mutex()
 
         proofRequest.requestedAttributes.concurrentForEach { (referent, requestedAttribute) ->
-            val credentials = credentialsForProof.attrs[referent] ?: return@concurrentForEach
+            val credentials = agent.anoncredsService.getCredentialsForProofRequest(proofRequest, referent)
 
-            val attributes = credentials.concurrentMap { credential ->
+            val attributes = credentials.concurrentMap { credentialInfo ->
                 val (revoked, deltaTimestamp) = getRevocationStatusForRequestedItem(
                     proofRequest,
                     requestedAttribute.nonRevoked,
-                    credential.credentialInfo,
+                    credentialInfo,
                 )
 
-                RequestedAttribute(credential.credentialInfo.referent, deltaTimestamp, true, credential.credentialInfo, revoked)
+                RequestedAttribute(credentialInfo.referent, deltaTimestamp, true, credentialInfo, revoked)
             }
             lock.withLock {
                 retrievedCredentials.requestedAttributes[referent] = attributes
@@ -253,16 +257,16 @@ class ProofService(val agent: Agent) {
         }
 
         proofRequest.requestedPredicates.concurrentForEach { (referent, requestedPredicate) ->
-            val credentials = credentialsForProof.predicates[referent] ?: return@concurrentForEach
+            val credentials = agent.anoncredsService.getCredentialsForProofRequest(proofRequest, referent)
 
-            val predicates = credentials.concurrentMap { credential ->
+            val predicates = credentials.concurrentMap { credentialInfo ->
                 val (revoked, deltaTimestamp) = getRevocationStatusForRequestedItem(
                     proofRequest,
                     requestedPredicate.nonRevoked,
-                    credential.credentialInfo,
+                    credentialInfo,
                 )
 
-                RequestedPredicate(credential.credentialInfo.referent, deltaTimestamp, credential.credentialInfo, revoked)
+                RequestedPredicate(credentialInfo.referent, deltaTimestamp, credentialInfo, revoked)
             }
             lock.withLock {
                 retrievedCredentials.requestedPredicates[referent] = predicates
@@ -323,26 +327,29 @@ class ProofService(val agent: Agent) {
      * @param proof the proof to verify.
      * @return true if the proof is valid, false otherwise.
      */
-    suspend fun verifyProof(proofRequest: String, proof: String): Boolean {
+    suspend fun verifyProof(proofRequest: String, proof: String): Boolean = coroutineScope {
         logger.debug("verifying proof: $proof")
         val partialProof = Json { ignoreUnknownKeys = true }.decodeFromString<PartialProof>(proof)
-        val schemas = getSchemas(partialProof.identifiers.map { it.schemaId }.toSet())
-        val credentialDefinitions = getCredentialDefinitions(partialProof.identifiers.map { it.credentialDefinitionId }.toSet())
+        val schemas = async { getSchemas(partialProof.identifiers.map { it.schemaId }.toSet()) }
+        val credentialDefinitions = async { getCredentialDefinitions(partialProof.identifiers.map { it.credentialDefinitionId }.toSet()) }
         val revocationRegistryDefinitions =
-            getRevocationRegistryDefinitions(partialProof.identifiers.mapNotNull { it.revocationRegistryId }.toSet())
-        val revocationRegistries = agent.revocationService.getRevocationRegistries(proof = partialProof)
+            async { getRevocationRegistryDefinitions(partialProof.identifiers.mapNotNull { it.revocationRegistryId }.toSet()) }
+        val revocationStatusLists = agent.revocationService.getRevocationStatusLists(partialProof, revocationRegistryDefinitions.await())
 
-        logger.trace("revocationRegistryDefinitions: $revocationRegistryDefinitions")
-        logger.trace("revocationRegistries: $revocationRegistries")
-
-        return Anoncreds.verifierVerifyProof(
-            proofRequest,
-            proof,
-            schemas,
-            credentialDefinitions,
-            revocationRegistryDefinitions,
-            revocationRegistries,
-        ).await()
+        return@coroutineScope try {
+            Verifier().verifyPresentation(
+                Presentation(proof),
+                PresentationRequest(proofRequest),
+                schemas.await(),
+                credentialDefinitions.await(),
+                revocationRegistryDefinitions.await(),
+                revocationStatusLists,
+                null,
+            )
+        } catch (e: Exception) {
+            logger.error("Error verifying proof: $e")
+            false
+        }
     }
 
     suspend fun getRevocationStatusForRequestedItem(
@@ -357,106 +364,119 @@ class ProofService(val agent: Agent) {
             return Pair(null, null)
         }
 
+        if (agent.agentConfig.ignoreRevocationCheck) {
+            return Pair(false, requestNonRevoked.to)
+        }
+
         return agent.revocationService.getRevocationStatus(credentialRevocationId, revocationRegistryId, requestNonRevoked)
     }
 
-    suspend fun getCredentialsForProofRequest(proofRequest: ProofRequest): CredentialsForProof {
-        val credentials = Anoncreds.proverGetCredentialsForProofReq(agent.wallet.indyWallet, proofRequest.toJsonString()).await()
-        logger.debug("Got credentials for proof request: $credentials")
-        return Json { ignoreUnknownKeys = true }.decodeFromString(credentials!!)
-    }
-
-    suspend fun createProof(proofRequest: String, requestedCredentials: RequestedCredentials): ByteArray = coroutineScope {
+    suspend fun createProof(proofRequest: String, requestedCredentials: RequestedCredentials): ByteArray {
         logger.debug("Creating proof with requestedCredentials: ${requestedCredentials.toJsonString()}")
-        val credentialObjects = mutableListOf<IndyCredentialInfo>()
-        val lock = Mutex()
+        val anoncredsCreds = mutableListOf<RequestedCredential>()
+        val credentialIds = requestedCredentials.getCredentialIdentifiers()
+        val schemaIds = mutableSetOf<String>()
+        val credentialDefinitionIds = mutableSetOf<String>()
 
-        requestedCredentials.requestedAttributes.concurrentForEach { (_, attribute) ->
-            val credentialInfo = getCredential(attribute.credentialId)
-            attribute.credentialInfo = credentialInfo
-            lock.withLock {
-                credentialObjects.add(credentialInfo)
+        credentialIds.concurrentForEach { credId ->
+            val credentialRecord = agent.credentialRepository.getByCredentialId(credId)
+            val credential = Credential(credentialRecord.credential)
+            schemaIds.add(credential.schemaId())
+            credentialDefinitionIds.add(credential.credDefId())
+
+            val requestedAttributes = mutableMapOf<String, Boolean>()
+            val requestedPredicates = mutableListOf<String>()
+            var timestamp: Int? = null
+            requestedCredentials.requestedAttributes.forEach { (referent, attr) ->
+                if (attr.credentialId == credId) {
+                    requestedAttributes[referent] = attr.revealed
+                    if (attr.timestamp != null) {
+                        timestamp = max(attr.timestamp, timestamp ?: 0)
+                    }
+                }
             }
-        }
-        requestedCredentials.requestedPredicates.concurrentForEach { (_, attribute) ->
-            val credentialInfo = getCredential(attribute.credentialId)
-            attribute.credentialInfo = credentialInfo
-            lock.withLock {
-                credentialObjects.add(credentialInfo)
+            requestedCredentials.requestedPredicates.forEach { (referent, pred) ->
+                if (pred.credentialId == credId) {
+                    requestedPredicates.add(referent)
+                    if (pred.timestamp != null) {
+                        timestamp = max(pred.timestamp, timestamp ?: 0)
+                    }
+                }
             }
+            val revocationState = if (timestamp != null) {
+                agent.revocationService.createRevocationState(credential, timestamp!!)
+            } else {
+                null
+            }
+            val requestedCredential = RequestedCredential(
+                credential,
+                timestamp?.toULong(),
+                revocationState,
+                requestedAttributes,
+                requestedPredicates,
+            )
+            anoncredsCreds.add(requestedCredential)
         }
 
-        val schemas = async { getSchemas(credentialObjects.map { it.schemaId }.toSet()) }
-        val credentialDefinitions = async { getCredentialDefinitions(credentialObjects.map { it.credentialDefinitionId }.toSet()) }
-        val revocationStates = async { agent.revocationService.createRevocationState(proofRequest, requestedCredentials) }
+        val schemas = getSchemas(schemaIds)
+        val credentialDefinitions = getCredentialDefinitions(credentialDefinitionIds)
+        val linkSecret = agent.anoncredsService.getLinkSecret(agent.wallet.linkSecretId!!)
 
-        logger.trace("schemas: ${schemas.await()}")
-        logger.trace("credentialDefinitions: ${credentialDefinitions.await()}")
-        logger.trace("revocationStates: ${revocationStates.await()}")
-
-        val indyProof = Anoncreds.proverCreateProof(
-            agent.wallet.indyWallet,
-            proofRequest,
-            requestedCredentials.toJsonString(),
-            agent.wallet.masterSecretId,
-            schemas.await(),
-            credentialDefinitions.await(),
-            revocationStates.await(),
-        ).await()
-
-        logger.trace("created proof: $indyProof")
-
-        return@coroutineScope indyProof!!.toByteArray()
+        try {
+            val presentation = Prover().createPresentation(
+                PresentationRequest(proofRequest),
+                anoncredsCreds,
+                emptyMap(),
+                linkSecret,
+                schemas,
+                credentialDefinitions,
+            )
+            return presentation.toJson().toByteArray()
+        } catch (e: Exception) {
+            throw Exception("Cannot create a proof using the provided credentials. $e")
+        }
     }
 
-    suspend fun getCredential(credentialId: String): IndyCredentialInfo {
-        val credential = Anoncreds.proverGetCredential(agent.wallet.indyWallet, credentialId).await()
-        return Json { ignoreUnknownKeys = true }.decodeFromString(credential!!)
-    }
-
-    suspend fun getSchemas(schemaIds: Set<String>): String {
-        val schemas = mutableMapOf<String, JsonObject>()
+    suspend fun getSchemas(schemaIds: Set<String>): Map<String, Schema> {
+        val schemas = mutableMapOf<String, Schema>()
         val lock = Mutex()
 
         schemaIds.concurrentForEach { schemaId ->
-            val schema = agent.ledgerService.getSchema(schemaId)
-            val schemaObj = Json.decodeFromString<JsonObject>(schema)
+            val (schema, _) = agent.ledgerService.getSchema(schemaId)
             lock.withLock {
-                schemas[schemaId] = schemaObj
+                schemas[schemaId] = Schema(schema)
             }
         }
 
-        return Json.encodeToString(schemas)
+        return schemas
     }
 
-    suspend fun getCredentialDefinitions(credentialDefinitionIds: Set<String>): String {
-        val credentialDefinitions = mutableMapOf<String, JsonObject>()
+    suspend fun getCredentialDefinitions(credentialDefinitionIds: Set<String>): Map<String, CredentialDefinition> {
+        val credentialDefinitions = mutableMapOf<String, CredentialDefinition>()
         val lock = Mutex()
 
         credentialDefinitionIds.concurrentForEach { credentialDefinitionId ->
             val credentialDefinition = agent.ledgerService.getCredentialDefinition(credentialDefinitionId)
-            val credentialDefinitionObj = Json.decodeFromString<JsonObject>(credentialDefinition)
             lock.withLock {
-                credentialDefinitions[credentialDefinitionId] = credentialDefinitionObj
+                credentialDefinitions[credentialDefinitionId] = CredentialDefinition(credentialDefinition)
             }
         }
 
-        return Json.encodeToString(credentialDefinitions)
+        return credentialDefinitions
     }
 
-    suspend fun getRevocationRegistryDefinitions(revocationRegistryIds: Set<String>): String {
-        val revocationRegistryDefinitions = mutableMapOf<String, JsonObject>()
+    suspend fun getRevocationRegistryDefinitions(revocationRegistryIds: Set<String>): Map<String, RevocationRegistryDefinition> {
+        val revocationRegistryDefinitions = mutableMapOf<String, RevocationRegistryDefinition>()
         val lock = Mutex()
 
         revocationRegistryIds.concurrentForEach { revocationRegistryId ->
             val revocationRegistryDefinition = agent.ledgerService.getRevocationRegistryDefinition(revocationRegistryId)
-            val revocationRegistryDefinitionObj = Json.decodeFromString<JsonObject>(revocationRegistryDefinition)
             lock.withLock {
-                revocationRegistryDefinitions[revocationRegistryId] = revocationRegistryDefinitionObj
+                revocationRegistryDefinitions[revocationRegistryId] = RevocationRegistryDefinition(revocationRegistryDefinition)
             }
         }
 
-        return Json.encodeToString(revocationRegistryDefinitions)
+        return revocationRegistryDefinitions
     }
 
     suspend fun updateState(proofRecord: ProofExchangeRecord, newState: ProofState) {

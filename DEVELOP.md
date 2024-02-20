@@ -1,18 +1,5 @@
 # Framework Development Guide
 
-## Depencencies
-
-[Indy SDK](https://github.com/hyperledger/indy-sdk) is the most important library for Aries Framework Kotlin. It provides the following functions:
-- DID management
-- Credential and proof management
-- Encryption/Decryption of messages
-- Storage of data
-
-Indy SDK is now deprecated and will be replaced by the following libraries soon:
-- Aries Askar secure storage https://github.com/hyperledger/aries-askar
-- Indy Verifiable Date Registry https://github.com/hyperledger/indy-vdr
-- Shared Rust libraries for Hyperledger Anoncreds https://github.com/hyperledger/anoncreds-rs
-
 ## Framework Internals
 
 Aries Framework Kotlin refers to [Aries Framework Swift](https://github.com/hyperledger/aries-framework-swift) a lot, so the structure is similar to it.
