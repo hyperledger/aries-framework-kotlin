@@ -17,6 +17,7 @@ import org.hyperledger.ariesframework.proofs.models.ProofAttributeInfo
 import org.hyperledger.ariesframework.proofs.models.ProofPredicateInfo
 import org.hyperledger.ariesframework.proofs.models.ProofRequest
 import org.hyperledger.ariesframework.proofs.models.ProofState
+import org.hyperledger.ariesframework.proofs.models.RevocationInterval
 import org.hyperledger.ariesframework.proofs.repository.ProofExchangeRecord
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -50,7 +51,7 @@ class ProofsTest {
     }
 
     suspend fun getCredentialRecord(agent: Agent, threadId: String): CredentialExchangeRecord {
-        return agent.credentialRepository.getByThreadAndConnectionId(threadId, null)
+        return agent.credentialExchangeRepository.getByThreadAndConnectionId(threadId, null)
     }
 
     suspend fun getProofRecord(agent: Agent, threadId: String): ProofExchangeRecord {
@@ -191,11 +192,14 @@ class ProofsTest {
 
         val retrievedCredentials = aliceAgent.proofs.getRequestedCredentialsForProofRequest(aliceProofRecord.id)
         assertEquals(1, retrievedCredentials.requestedAttributes["name"]!!.size)
-        assertEquals(0, retrievedCredentials.requestedPredicates["age"]!!.size)
+        // We do not filter out credentials that do not satisfy predicates.
+        // assertEquals(0, retrievedCredentials.requestedPredicates["age"]!!.size)
 
+        val requestedCredentials = aliceAgent.proofService.autoSelectCredentialsForProofRequest(retrievedCredentials)
         try {
-            aliceAgent.proofService.autoSelectCredentialsForProofRequest(retrievedCredentials)
-            throw Exception("Exception must be thrown")
+            // This should throw an error because we cannot create a proof satisfying the predicates.
+            aliceAgent.proofs.acceptRequest(aliceProofRecord.id, requestedCredentials)
+            assert(false) { "Exception must be thrown" }
         } catch (e: Exception) {
             // Expected
         }
@@ -299,5 +303,36 @@ class ProofsTest {
             val requestedCredentials = aliceAgent.proofService.autoSelectCredentialsForProofRequest(retrievedCredentials)
             aliceAgent.proofService.createProof(proofRequest.toJsonString(), requestedCredentials)
         }
+    }
+
+    suspend fun getProofRequestWithNonRevoked(): ProofRequest {
+        val attributes = mapOf(
+            "name" to ProofAttributeInfo("name", null, null, listOf(AttributeFilter(credentialDefinitionId = credDefId))),
+        )
+        val nonce = ProofService.generateProofRequestNonce()
+        return ProofRequest(
+            nonce = nonce,
+            requestedAttributes = attributes,
+            requestedPredicates = mapOf(),
+            nonRevoked = RevocationInterval(null, (System.currentTimeMillis() / 1000L).toInt()),
+        )
+    }
+
+    @Test @LargeTest
+    fun testNonRevokedRequest() = runTest {
+        aliceAgent.agentConfig.autoAcceptProof = AutoAcceptProof.Always
+        faberAgent.agentConfig.autoAcceptProof = AutoAcceptProof.Always
+
+        issueCredential()
+        val proofRequest = getProofRequestWithNonRevoked()
+        var faberProofRecord = faberAgent.proofs.requestProof(faberConnection.id, proofRequest)
+
+        val threadId = faberProofRecord.threadId
+        val aliceProofRecord = getProofRecord(aliceAgent, threadId)
+        faberProofRecord = getProofRecord(faberAgent, threadId)
+
+        assertEquals(ProofState.Done, aliceProofRecord.state)
+        assertEquals(ProofState.Done, faberProofRecord.state)
+        assertEquals(true, faberProofRecord.isVerified)
     }
 }

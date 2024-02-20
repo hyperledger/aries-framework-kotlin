@@ -34,7 +34,7 @@ class WalletApp : Application() {
         var key = pref.getString("walletKey", null)
 
         if (key == null) {
-            key = Wallet.generateKey()
+            key = Agent.generateWalletKey()
             pref.edit().putString("walletKey", key).apply()
             copyResourceFile(genesisPath)
         }

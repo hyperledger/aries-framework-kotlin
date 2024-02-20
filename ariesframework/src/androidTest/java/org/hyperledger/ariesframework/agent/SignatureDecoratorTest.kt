@@ -33,9 +33,7 @@ class SignatureDecoratorTest {
 
     @After
     fun tearDown() = runTest {
-        if (agent.wallet.indyWallet != null) {
-            agent.wallet.delete()
-        }
+        agent.wallet.delete()
     }
 
     @Test

@@ -55,7 +55,7 @@ class WalletMainActivity : AppCompatActivity() {
                         val (_, connection) = app.agent.oob.receiveInvitationFromUrl(invitation)
                         showAlert("Connected to ${connection?.theirLabel ?: "unknown agent"}")
                     } catch (e: Exception) {
-                        showAlert("Unable to connect, please check your network connection")
+                        showAlert("Unable to connect: ${e.localizedMessage}")
                     }
                 }
             }

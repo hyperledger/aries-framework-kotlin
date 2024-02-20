@@ -11,11 +11,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.hyperledger.ariesproject.databinding.ActivityCredentialDetailBinding
 import org.hyperledger.ariesproject.databinding.CredentialDetailBinding
-import org.json.JSONObject
+import anoncreds_uniffi.Credential
 
 class CredentialDetailFragment : Fragment() {
 
-    private var item: JSONObject? = null
+    private var item: Credential? = null
+    private var credentialId: String? = null
     private lateinit var detailBinding: ActivityCredentialDetailBinding
     private lateinit var binding: CredentialDetailBinding
 
@@ -24,7 +25,8 @@ class CredentialDetailFragment : Fragment() {
 
         arguments?.let {
             if (it.containsKey(ARG_CREDENTIAL)) {
-                item = JSONObject(it.getString(ARG_CREDENTIAL))
+                item = Credential(it.getString(ARG_CREDENTIAL)!!)
+                credentialId = it.getString(ARG_CREDENTIAL_ID)
                 detailBinding = ActivityCredentialDetailBinding.inflate(layoutInflater)
                 detailBinding.toolbarLayout.title = getString(R.string.title_credential_detail)
             }
@@ -39,15 +41,13 @@ class CredentialDetailFragment : Fragment() {
         binding = CredentialDetailBinding.inflate(inflater, container, false)
         val rootView = binding.root
         item?.let {
-            val attrs = it.getJSONObject("attrs")
-            val keys = attrs.keys()
-            binding.credentialDetail.text = keys.asSequence().map { key ->
-                val value = attrs.getString(key)
-                "$key: $value"
+            val attrs = it.values()
+            binding.credentialDetail.text = attrs.map { attr ->
+                "${attr.key}: ${attr.value}"
             }.joinToString("\n")
 
             val activity = activity as CredentialDetailActivity
-            val credId = it.getString("referent")
+            val app = activity.application as WalletApp
 
             // Bind the delete button to the delete action
             binding.deleteCredentialButton.setOnClickListener {
@@ -58,9 +58,7 @@ class CredentialDetailFragment : Fragment() {
                     .setMessage(R.string.title_delete_cred_detail)
                     .setPositiveButton(R.string.ok) { dialog, which ->
                         lifecycleScope.launch(Dispatchers.IO) {
-                            // Get application context from activity
-                            val app = activity.application as WalletApp
-                            app.agent.deleteCredential(credId)
+                            app.agent.credentialRepository.deleteById(credentialId!!)
                             activity.runOnUiThread {
                                 dialog.dismiss()
                                 activity.finish()
@@ -80,5 +78,6 @@ class CredentialDetailFragment : Fragment() {
 
     companion object {
         const val ARG_CREDENTIAL = "item_credential"
+        const val ARG_CREDENTIAL_ID = "item_credential_id"
     }
 }

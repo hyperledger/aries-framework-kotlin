@@ -2,7 +2,6 @@ package org.hyperledger.ariesframework.credentials
 
 import androidx.test.filters.LargeTest
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -52,7 +51,7 @@ class CredentialsTest {
     }
 
     suspend fun getCredentialRecord(agent: Agent, threadId: String): CredentialExchangeRecord {
-        return agent.credentialRepository.getByThreadAndConnectionId(threadId, null)
+        return agent.credentialExchangeRepository.getByThreadAndConnectionId(threadId, null)
     }
 
     @Test @LargeTest

@@ -13,7 +13,6 @@ import org.hyperledger.ariesframework.connection.models.ConnectionRole
 import org.hyperledger.ariesframework.connection.models.ConnectionState
 import org.hyperledger.ariesframework.connection.models.didauth.didDocServiceModule
 import org.hyperledger.ariesframework.routing.Routing
-import org.hyperledger.ariesframework.wallet.Wallet
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -32,7 +31,7 @@ class ConnectionServiceTest {
     @Before
     fun setUp() = runTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val key = Wallet.generateKey()
+        val key = "HfyxAyKK8Z2xVzWbXXy2erY32B9Bnr8WFgR5HfzjAnGx"
         config = AgentConfig(
             walletId = "wallet_id",
             walletKey = key,

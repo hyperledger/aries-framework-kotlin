@@ -8,5 +8,9 @@ interface OutboundTransport {
 }
 
 object AgentHttpClient {
-    val client = OkHttpClient()
+    val client = OkHttpClient().newBuilder()
+        .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
 }

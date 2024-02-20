@@ -1,12 +1,21 @@
 package org.hyperledger.ariesframework.credentials
 
+import anoncreds_uniffi.Credential
+import anoncreds_uniffi.CredentialDefinition
+import anoncreds_uniffi.CredentialDefinitionPrivate
+import anoncreds_uniffi.CredentialKeyCorrectnessProof
+import anoncreds_uniffi.CredentialOffer
+import anoncreds_uniffi.CredentialRequest
+import anoncreds_uniffi.CredentialRequestMetadata
+import anoncreds_uniffi.CredentialRevocationConfig
+import anoncreds_uniffi.Issuer
+import anoncreds_uniffi.Prover
+import anoncreds_uniffi.RevocationRegistryDefinition
+import anoncreds_uniffi.RevocationRegistryDefinitionPrivate
+import anoncreds_uniffi.RevocationStatusList
+import anoncreds_uniffi.Schema
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import org.hyperledger.ariesframework.AckStatus
 import org.hyperledger.ariesframework.InboundMessageContext
 import org.hyperledger.ariesframework.agent.Agent
@@ -14,6 +23,7 @@ import org.hyperledger.ariesframework.agent.AgentEvents
 import org.hyperledger.ariesframework.agent.MessageSerializer
 import org.hyperledger.ariesframework.agent.decorators.Attachment
 import org.hyperledger.ariesframework.agent.decorators.ThreadDecorator
+import org.hyperledger.ariesframework.anoncreds.storage.CredentialRecord
 import org.hyperledger.ariesframework.credentials.messages.CredentialAckMessage
 import org.hyperledger.ariesframework.credentials.messages.IssueCredentialMessage
 import org.hyperledger.ariesframework.credentials.messages.OfferCredentialMessage
@@ -26,20 +36,18 @@ import org.hyperledger.ariesframework.credentials.models.CreateOfferOptions
 import org.hyperledger.ariesframework.credentials.models.CreateProposalOptions
 import org.hyperledger.ariesframework.credentials.models.CredentialPreview
 import org.hyperledger.ariesframework.credentials.models.CredentialState
-import org.hyperledger.ariesframework.credentials.models.CredentialValues
-import org.hyperledger.ariesframework.credentials.models.IndyCredential
 import org.hyperledger.ariesframework.credentials.repository.CredentialExchangeRecord
 import org.hyperledger.ariesframework.credentials.repository.CredentialRecordBinding
 import org.hyperledger.ariesframework.problemreports.messages.CredentialProblemReportMessage
 import org.hyperledger.ariesframework.storage.BaseRecord
 import org.hyperledger.ariesframework.storage.DidCommMessageRole
-import org.hyperledger.indy.sdk.anoncreds.Anoncreds
 import org.slf4j.LoggerFactory
+import java.util.UUID
 
 class CredentialService(val agent: Agent) {
     private val logger = LoggerFactory.getLogger(CredentialService::class.java)
     private val ledgerService = agent.ledgerService
-    private val credentialRepository = agent.credentialRepository
+    private val credentialExchangeRepository = agent.credentialExchangeRepository
 
     /**
      * Create a ``ProposeCredentialMessage`` not bound to an existing credential record.
@@ -70,7 +78,7 @@ class CredentialService(val agent: Agent) {
 
         agent.didCommMessageRepository.saveAgentMessage(DidCommMessageRole.Sender, message, credentialRecord.id)
 
-        credentialRepository.save(credentialRecord)
+        credentialExchangeRepository.save(credentialRecord)
         agent.eventBus.publish(AgentEvents.CredentialEvent(credentialRecord.copy()))
 
         return Pair(message, credentialRecord)
@@ -94,8 +102,13 @@ class CredentialService(val agent: Agent) {
             protocolVersion = "v1",
         )
 
-        val offer = Anoncreds.issuerCreateCredentialOffer(agent.wallet.indyWallet, options.credentialDefinitionId).await()
-        val attachment = Attachment.fromData(offer.toByteArray(), OfferCredentialMessage.INDY_CREDENTIAL_OFFER_ATTACHMENT_ID)
+        val credentialDefinitionRecord = agent.credentialDefinitionRepository.getByCredDefId(options.credentialDefinitionId)
+        val offer = Issuer().createCredentialOffer(
+            credentialDefinitionRecord.schemaId,
+            credentialDefinitionRecord.credDefId,
+            CredentialKeyCorrectnessProof(credentialDefinitionRecord.keyCorrectnessProof),
+        )
+        val attachment = Attachment.fromData(offer.toJson().toByteArray(), OfferCredentialMessage.INDY_CREDENTIAL_OFFER_ATTACHMENT_ID)
         val credentialPreview = CredentialPreview(options.attributes)
 
         val message = OfferCredentialMessage(
@@ -108,7 +121,7 @@ class CredentialService(val agent: Agent) {
         agent.didCommMessageRepository.saveAgentMessage(DidCommMessageRole.Sender, message, credentialRecord.id)
 
         credentialRecord.credentialAttributes = options.attributes
-        credentialRepository.save(credentialRecord)
+        credentialExchangeRepository.save(credentialRecord)
         agent.eventBus.publish(AgentEvents.CredentialEvent(credentialRecord.copy()))
 
         return Pair(message, credentialRecord)
@@ -130,7 +143,7 @@ class CredentialService(val agent: Agent) {
             "Indy attachment with id ${OfferCredentialMessage.INDY_CREDENTIAL_OFFER_ATTACHMENT_ID} not found in offer message"
         }
 
-        var credentialRecord = credentialRepository.findByThreadAndConnectionId(offerMessage.threadId, messageContext.connection?.id)
+        var credentialRecord = credentialExchangeRepository.findByThreadAndConnectionId(offerMessage.threadId, messageContext.connection?.id)
         if (credentialRecord != null) {
             agent.didCommMessageRepository.saveAgentMessage(DidCommMessageRole.Receiver, offerMessage, credentialRecord.id)
             updateState(credentialRecord, CredentialState.OfferReceived)
@@ -144,7 +157,7 @@ class CredentialService(val agent: Agent) {
             )
 
             agent.didCommMessageRepository.saveAgentMessage(DidCommMessageRole.Receiver, offerMessage, credentialRecord.id)
-            credentialRepository.save(credentialRecord)
+            credentialExchangeRepository.save(credentialRecord)
             agent.eventBus.publish(AgentEvents.CredentialEvent(credentialRecord.copy()))
         }
 
@@ -158,7 +171,7 @@ class CredentialService(val agent: Agent) {
      * @return request message.
      */
     suspend fun createRequest(options: AcceptOfferOptions): RequestCredentialMessage {
-        val credentialRecord = credentialRepository.getById(options.credentialRecordId)
+        val credentialRecord = credentialExchangeRepository.getById(options.credentialRecordId)
         credentialRecord.assertProtocolVersion("v1")
         credentialRecord.assertState(CredentialState.OfferReceived)
 
@@ -172,24 +185,24 @@ class CredentialService(val agent: Agent) {
         val holderDid = options.holderDid ?: getHolderDid(credentialRecord)
 
         val credentialOfferJson = offerMessage.getCredentialOffer()
-        val credentialOffer = Json.decodeFromString<JsonObject>(credentialOfferJson)
-        val credentialDefinition = ledgerService.getCredentialDefinition(
-            credentialOffer["cred_def_id"]?.jsonPrimitive?.content ?: "unknown_id",
+        val credentialOffer = CredentialOffer(credentialOfferJson)
+        val credentialDefinition = ledgerService.getCredentialDefinition(credentialOffer.credDefId())
+
+        val linkSecret = agent.anoncredsService.getLinkSecret(agent.wallet.linkSecretId!!)
+        val credReqTuple = Prover().createCredentialRequest(
+            null,
+            holderDid,
+            CredentialDefinition(credentialDefinition),
+            linkSecret,
+            agent.wallet.linkSecretId!!,
+            credentialOffer,
         )
 
-        val credentialRequest = Anoncreds.proverCreateCredentialReq(
-            agent.wallet.indyWallet,
-            holderDid,
-            credentialOfferJson,
-            credentialDefinition,
-            agent.wallet.masterSecretId,
-        ).await()
-
-        credentialRecord.indyRequestMetadata = credentialRequest.credentialRequestMetadataJson
-        credentialRecord.credentialDefinitionId = credentialOffer["cred_def_id"]?.jsonPrimitive?.content
+        credentialRecord.indyRequestMetadata = credReqTuple.metadata.toJson()
+        credentialRecord.credentialDefinitionId = credentialOffer.credDefId()
 
         val attachment = Attachment.fromData(
-            credentialRequest.credentialRequestJson.toByteArray(),
+            credReqTuple.request.toJson().toByteArray(),
             RequestCredentialMessage.INDY_CREDENTIAL_REQUEST_ATTACHMENT_ID,
         )
         val requestMessage = RequestCredentialMessage(
@@ -223,7 +236,7 @@ class CredentialService(val agent: Agent) {
             "Indy attachment with id ${RequestCredentialMessage.INDY_CREDENTIAL_REQUEST_ATTACHMENT_ID} not found in request message"
         }
 
-        var credentialRecord = credentialRepository.getByThreadAndConnectionId(
+        var credentialRecord = credentialExchangeRepository.getByThreadAndConnectionId(
             requestMessage.threadId,
             messageContext.connection?.id,
         )
@@ -245,7 +258,8 @@ class CredentialService(val agent: Agent) {
      * @return credential message.
      */
     suspend fun createCredential(options: AcceptRequestOptions): IssueCredentialMessage {
-        var credentialRecord = credentialRepository.getById(options.credentialRecordId)
+        logger.debug("Creating credential...")
+        var credentialRecord = credentialExchangeRepository.getById(options.credentialRecordId)
         credentialRecord.assertProtocolVersion("v1")
         credentialRecord.assertState(CredentialState.RequestReceived)
 
@@ -260,20 +274,36 @@ class CredentialService(val agent: Agent) {
             "Missing data payload in offer or request attachment in credential Record ${credentialRecord.id}"
         }
 
-        val offer = offerAttachment.getDataAsString()
-        val request = requestAttachment.getDataAsString()
+        val offer = CredentialOffer(offerAttachment.getDataAsString())
+        val request = CredentialRequest(requestAttachment.getDataAsString())
+        val credDefId = offer.credDefId()
+        val credentialDefinitionRecord = agent.credentialDefinitionRepository.getByCredDefId(credDefId)
 
-        val credential = Anoncreds.issuerCreateCredential(
-            agent.wallet.indyWallet,
+        var revocationConfig: CredentialRevocationConfig? = null
+        val revocationRecord = agent.revocationRegistryRepository.findByCredDefId(credDefId)
+        if (revocationRecord != null) {
+            val registryIndex = agent.revocationRegistryRepository.incrementRegistryIndex(credDefId)
+            logger.debug("Revocation registry index: $registryIndex")
+            revocationConfig = CredentialRevocationConfig(
+                regDef = RevocationRegistryDefinition(revocationRecord.revocRegDef),
+                regDefPrivate = RevocationRegistryDefinitionPrivate(revocationRecord.revocRegPrivate),
+                statusList = RevocationStatusList(revocationRecord.revocStatusList),
+                registryIndex = registryIndex.toUInt(),
+            )
+        }
+
+        val credential = Issuer().createCredential(
+            CredentialDefinition(credentialDefinitionRecord.credDef),
+            CredentialDefinitionPrivate(credentialDefinitionRecord.credDefPriv),
             offer,
             request,
-            CredentialValues.convertAttributesToValues(credentialRecord.credentialAttributes!!),
+            credentialRecord.getCredentialInfo()!!.claims,
             null,
-            0,
-        ).await()
+            revocationConfig,
+        )
 
         val attachment = Attachment.fromData(
-            credential.credentialJson.toByteArray(),
+            credential.toJson().toByteArray(),
             IssueCredentialMessage.INDY_CREDENTIAL_ATTACHMENT_ID,
         )
         val issueMessage = IssueCredentialMessage(
@@ -304,28 +334,47 @@ class CredentialService(val agent: Agent) {
             "Indy attachment with id ${IssueCredentialMessage.INDY_CREDENTIAL_ATTACHMENT_ID} not found in issue message"
         }
 
-        var credentialRecord = credentialRepository.getByThreadAndConnectionId(issueMessage.threadId, messageContext.connection?.id)
-        val credential = issueAttachment.getDataAsString()
-        logger.debug("Storing credential: $credential")
-        val credentialInfo = Json { ignoreUnknownKeys = true }.decodeFromString<IndyCredential>(credential)
-        val credentialDefinition = ledgerService.getCredentialDefinition(credentialInfo.credentialDefinitionId)
-        val revocationRegistry = credentialInfo.revocationRegistryId?.let { ledgerService.getRevocationRegistryDefinition(it) }
+        var credentialRecord = credentialExchangeRepository.getByThreadAndConnectionId(issueMessage.threadId, messageContext.connection?.id)
+        val credential = Credential(issueAttachment.getDataAsString())
+        logger.debug("Storing credential: ${credential.values()}")
+        val (schemaJson, _) = ledgerService.getSchema(credential.schemaId())
+        val schema = Schema(schemaJson)
+        val credentialDefinition = CredentialDefinition(ledgerService.getCredentialDefinition(credential.credDefId()))
+        val revocationRegistryJson = credential.revRegId()?.let { ledgerService.getRevocationRegistryDefinition(it) }
+        val revocationRegistry = revocationRegistryJson?.let { RevocationRegistryDefinition(it) }
         if (revocationRegistry != null) {
             GlobalScope.launch {
                 agent.revocationService.downloadTails(revocationRegistry)
             }
         }
 
-        val credentialId = Anoncreds.proverStoreCredential(
-            agent.wallet.indyWallet,
-            null,
-            credentialRecord.indyRequestMetadata,
+        val linkSecret = agent.anoncredsService.getLinkSecret(agent.wallet.linkSecretId!!)
+        val processedCredential = Prover().processCredential(
             credential,
+            CredentialRequestMetadata(credentialRecord.indyRequestMetadata!!),
+            linkSecret,
             credentialDefinition,
             revocationRegistry,
-        ).await()
-        credentialRecord.credentials.add(CredentialRecordBinding("indy", credentialId!!))
+        )
 
+        val credentialId = UUID.randomUUID().toString()
+        agent.credentialRepository.save(
+            CredentialRecord(
+                credentialId = credentialId,
+                credentialRevocationId = processedCredential.revRegIndex()?.toString(),
+                revocationRegistryId = processedCredential.revRegId(),
+                linkSecretId = agent.wallet.linkSecretId!!,
+                credentialObject = processedCredential,
+                schemaId = processedCredential.schemaId(),
+                schemaName = schema.name(),
+                schemaVersion = schema.version(),
+                schemaIssuerId = schema.issuerId(),
+                issuerId = credentialDefinition.issuerId(),
+                credentialDefinitionId = processedCredential.credDefId(),
+            ),
+        )
+
+        credentialRecord.credentials.add(CredentialRecordBinding("indy", credentialId))
         agent.didCommMessageRepository.saveAgentMessage(DidCommMessageRole.Receiver, issueMessage, credentialRecord.id)
         updateState(credentialRecord, CredentialState.CredentialReceived)
 
@@ -339,7 +388,7 @@ class CredentialService(val agent: Agent) {
      * @return credential acknowledgement message.
      */
     suspend fun createAck(options: AcceptCredentialOptions): CredentialAckMessage {
-        var credentialRecord = credentialRepository.getById(options.credentialRecordId)
+        var credentialRecord = credentialExchangeRepository.getById(options.credentialRecordId)
         credentialRecord.assertProtocolVersion("v1")
         credentialRecord.assertState(CredentialState.CredentialReceived)
 
@@ -355,7 +404,7 @@ class CredentialService(val agent: Agent) {
      * @return credential problem report message.
      */
     suspend fun createOfferDeclinedProblemReport(options: AcceptOfferOptions): CredentialProblemReportMessage {
-        var credentialRecord = credentialRepository.getById(options.credentialRecordId)
+        var credentialRecord = credentialExchangeRepository.getById(options.credentialRecordId)
         credentialRecord.assertProtocolVersion("v1")
         credentialRecord.assertState(CredentialState.OfferReceived)
 
@@ -373,7 +422,7 @@ class CredentialService(val agent: Agent) {
     suspend fun processAck(messageContext: InboundMessageContext): CredentialExchangeRecord {
         val ackMessage = MessageSerializer.decodeFromString(messageContext.plaintextMessage) as CredentialAckMessage
 
-        var credentialRecord = credentialRepository.getByThreadAndConnectionId(ackMessage.threadId, messageContext.connection?.id)
+        var credentialRecord = credentialExchangeRepository.getByThreadAndConnectionId(ackMessage.threadId, messageContext.connection?.id)
         updateState(credentialRecord, CredentialState.Done)
 
         return credentialRecord
@@ -386,7 +435,7 @@ class CredentialService(val agent: Agent) {
 
     suspend fun updateState(credentialRecord: CredentialExchangeRecord, newState: CredentialState) {
         credentialRecord.state = newState
-        credentialRepository.update(credentialRecord)
+        credentialExchangeRepository.update(credentialRecord)
         agent.eventBus.publish(AgentEvents.CredentialEvent(credentialRecord.copy()))
     }
 }

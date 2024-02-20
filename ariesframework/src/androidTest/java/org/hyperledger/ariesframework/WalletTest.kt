@@ -26,7 +26,7 @@ class WalletTest {
 
     @After
     fun tearDown() = runTest {
-        if (agent.wallet.indyWallet != null) {
+        if (agent.wallet.session != null) {
             agent.wallet.delete()
         }
     }
@@ -34,12 +34,10 @@ class WalletTest {
     @Test
     fun testInitAndDelete() = runTest {
         val wallet = agent.wallet
-        assertNotNull(wallet.indyWallet)
-        assertNotNull(wallet.masterSecretId)
+        assertNotNull(wallet.session)
 
         wallet.delete()
-        assertNull(wallet.indyWallet)
-        assertNull(wallet.masterSecretId)
+        assertNull(wallet.session)
     }
 
     @Test

@@ -29,7 +29,6 @@ class WsOutboundTransport(val agent: Agent) : OutboundTransport, WebSocketListen
             if (socket == null || endpoint != _package.endpoint) {
                 socket = createSocket(_package.endpoint)
             }
-            logger.debug("Sending outbound package: {}", Json.encodeToString(_package.payload))
             if (!socket!!.send(Json.encodeToString(_package.payload).encodeUtf8())) {
                 throw Exception("Failed to send outbound package to endpoint ${_package.endpoint}")
             }

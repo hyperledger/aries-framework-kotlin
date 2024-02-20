@@ -2,6 +2,7 @@ package org.hyperledger.ariesframework
 
 import android.content.Context
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.delay
 import org.hyperledger.ariesframework.agent.Agent
 import org.hyperledger.ariesframework.agent.AgentConfig
 import org.hyperledger.ariesframework.agent.SubjectOutboundTransport
@@ -22,6 +23,7 @@ import org.hyperledger.ariesframework.proofs.models.AutoAcceptProof
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.UUID
+import kotlin.time.Duration.Companion.seconds
 
 object TestHelper {
     val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -32,16 +34,16 @@ object TestHelper {
         val key = "HfyxAyKK8Z2xVzWbXXy2erY32B9Bnr8WFgR5HfzjAnGx"
         copyResourceFile(bcovrin)
         return AgentConfig(
-            walletId = name,
+            walletId = "AFSTestWallet_$name",
             walletKey = key,
             genesisPath = File(context.filesDir.absolutePath, bcovrin).absolutePath,
             poolName = name,
             mediatorConnectionsInvite = null,
-            label = "Agent: $name",
+            label = "Agent_$name",
             autoAcceptCredential = AutoAcceptCredential.Never,
             autoAcceptProof = AutoAcceptProof.Never,
             useLedgerService = useLedgerSerivce,
-            publicDidSeed = "00000000000000000000000AFKIssuer",
+            publicDidSeed = "00000000000000000000000AFKIssuer", // this should be registered as an endorser on bcovrin
         )
     }
 
@@ -169,13 +171,14 @@ object TestHelper {
         logger.debug("Preparing for issuance")
         val didInfo = agent.wallet.publicDid ?: throw Exception("Agent has no public DID.")
         val schemaId = agent.ledgerService.registerSchema(
-            didInfo.did,
+            didInfo,
             SchemaTemplate("schema-${UUID.randomUUID()}", "1.0", attributes),
         )
-        val schema = agent.ledgerService.getSchema(schemaId)
+        delay(0.1.seconds)
+        val (schema, seqNo) = agent.ledgerService.getSchema(schemaId)
         return agent.ledgerService.registerCredentialDefinition(
-            didInfo.did,
-            CredentialDefinitionTemplate(schema, "default", false),
+            didInfo,
+            CredentialDefinitionTemplate(schema, "default", false, seqNo),
         )
     }
 

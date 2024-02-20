@@ -32,16 +32,6 @@ dependencies {
 }
 ```
 
-You will also need these to use Indy-SDK APIs:
-```groovy
-dependencies {
-    implementation ('org.hyperledger:indy:1.16.0') {
-        exclude group: 'net.java.dev.jna', module: 'jna'
-    }
-    implementation 'net.java.dev.jna:jna:5.8.0@aar'
-}
-```
-
 You need additional dependencies if you include the framework as an AAR file:
 ```groovy
 dependencies {
@@ -81,7 +71,7 @@ App development using Aries Framework Kotlin is done in following steps:
 
 To create an agent, first create a key to encrypt the wallet and save it in the [EncryptedSharedPreferences](https://developer.android.com/reference/androidx/security/crypto/EncryptedSharedPreferences).
 ```Kotlin
-    val key = Wallet.generateKey()
+    val key = Agent.generateWalletKey()
 ```
 
 A genesis file for the indy pool should be included as a resource in the app bundle and should be copyed to the file system before initializing the agent.

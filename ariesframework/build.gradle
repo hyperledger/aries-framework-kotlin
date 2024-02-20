@@ -3,22 +3,8 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.serialization' version '1.8.10'
     id "org.jlleitschuh.gradle.ktlint" version '11.4.2'
-    id 'de.undercouch.download' version '5.4.0'
     id 'maven-publish'
 }
-
-task downloadIndyLibs(type: Download) {
-    src 'https://github.com/naver/indy-sdk/releases/download/v1.16.0/jniLibs.zip'
-    dest new File(buildDir, 'tmp/jniLibs.zip')
-    onlyIfModified true
-}
-task unzipIndyLibs(type: Copy) {
-    dependsOn downloadIndyLibs
-    from zipTree(tasks.downloadIndyLibs.dest)
-    into 'src/main'
-}
-preBuild.dependsOn unzipIndyLibs
-runKtlintCheckOverMainSourceSet.dependsOn unzipIndyLibs
 
 android {
     namespace 'org.hyperledger.ariesframework'
@@ -60,10 +46,10 @@ ktlint {
 }
 
 dependencies {
-    implementation ('org.hyperledger:indy:1.16.0') {
-        exclude group: 'net.java.dev.jna', module: 'jna'
-    }
-    implementation 'net.java.dev.jna:jna:5.8.0@aar'
+    implementation("org.hyperledger:anoncreds_uniffi:0.1.1-wrapper.1")
+    implementation("org.hyperledger:indy_vdr_uniffi:0.1.1-wrapper.1")
+    implementation("org.hyperledger:askar_uniffi:0.1.1-wrapper.1")
+
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0"
     implementation 'org.slf4j:slf4j-api:1.7.32'
     implementation 'ch.qos.logback:logback-classic:1.2.6'

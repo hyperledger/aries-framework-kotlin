@@ -97,7 +97,7 @@ class ProblemReportsTest {
     }
 
     suspend fun getCredentialRecord(agent: Agent, threadId: String): CredentialExchangeRecord {
-        return agent.credentialRepository.getByThreadAndConnectionId(threadId, null)
+        return agent.credentialExchangeRepository.getByThreadAndConnectionId(threadId, null)
     }
 
     suspend fun getProofRecord(agent: Agent, threadId: String): ProofExchangeRecord {

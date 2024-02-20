@@ -93,3 +93,32 @@ enum class AckStatus {
     FAIL,
     PENDING,
 }
+
+@Serializable
+data class JweRecipient(
+    @SerialName("encrypted_key")
+    val encryptedKey: String,
+    val header: Map<String, String>?,
+)
+
+@Serializable
+data class JweEnvelope(
+    val protected: String,
+    val unprotected: String?,
+    val recipients: List<JweRecipient>?,
+    val ciphertext: String,
+    val iv: String,
+    val tag: String,
+    val aad: String?,
+    val header: List<String>?,
+    @SerialName("encrypted_key")
+    val encryptedKey: String?,
+)
+
+@Serializable
+data class ProtectedHeader(
+    val enc: String,
+    val typ: String,
+    val alg: String,
+    val recipients: List<JweRecipient>,
+)

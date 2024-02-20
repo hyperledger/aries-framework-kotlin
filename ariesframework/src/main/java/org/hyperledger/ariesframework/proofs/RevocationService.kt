@@ -1,12 +1,12 @@
 package org.hyperledger.ariesframework.proofs
 
-import kotlinx.coroutines.future.await
-import kotlinx.serialization.decodeFromString
+import anoncreds_uniffi.Credential
+import anoncreds_uniffi.CredentialRevocationState
+import anoncreds_uniffi.Prover
+import anoncreds_uniffi.RevocationRegistryDefinition
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import org.hyperledger.ariesframework.agent.Agent
 import org.hyperledger.ariesframework.proofs.models.IndyCredentialInfo
 import org.hyperledger.ariesframework.proofs.models.PartialProof
@@ -14,10 +14,8 @@ import org.hyperledger.ariesframework.proofs.models.ProofRequest
 import org.hyperledger.ariesframework.proofs.models.RequestedCredentials
 import org.hyperledger.ariesframework.proofs.models.RevocationInterval
 import org.hyperledger.ariesframework.proofs.models.RevocationRegistryDelta
-import org.hyperledger.ariesframework.toJsonString
+import org.hyperledger.ariesframework.proofs.models.RevocationStatusList
 import org.hyperledger.ariesframework.util.concurrentForEach
-import org.hyperledger.indy.sdk.anoncreds.Anoncreds
-import org.hyperledger.indy.sdk.blob_storage.BlobStorageReader
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.net.URL
@@ -59,6 +57,37 @@ class RevocationService(val agent: Agent) {
         return Json.encodeToString(revocationRegistries)
     }
 
+    suspend fun getRevocationStatusLists(
+        proof: PartialProof,
+        revocationRegistryDefinitions: Map<String, RevocationRegistryDefinition>,
+    ): List<anoncreds_uniffi.RevocationStatusList> {
+        val revocationStatusLists = mutableListOf<anoncreds_uniffi.RevocationStatusList>()
+
+        proof.identifiers.concurrentForEach { identifier ->
+            if (identifier.revocationRegistryId != null && identifier.timestamp != null) {
+                val revocationRegistryDefinition = revocationRegistryDefinitions[identifier.revocationRegistryId]
+                    ?: throw Exception("Revocation registry definition not found for id: ${identifier.revocationRegistryId}")
+
+                val (revocationRegistryJson, _) = agent.ledgerService.getRevocationRegistry(
+                    identifier.revocationRegistryId,
+                    identifier.timestamp,
+                )
+                val revocationRegistryDelta = Json.decodeFromString<RevocationRegistryDelta>(revocationRegistryJson)
+                logger.debug("Revocation registry at time ${identifier.timestamp}: $revocationRegistryJson")
+                val revocationStatusList = RevocationStatusList(
+                    revocationRegistryDefinition.issuerId(),
+                    revocationRegistryDelta.accum,
+                    identifier.revocationRegistryId,
+                    emptyList(),
+                    identifier.timestamp,
+                )
+                revocationStatusLists.add(anoncreds_uniffi.RevocationStatusList(revocationStatusList.toJsonString()))
+            }
+        }
+
+        return revocationStatusLists
+    }
+
     suspend fun getRevocationStatus(
         credentialRevocationId: String,
         revocationRegistryId: String,
@@ -71,11 +100,39 @@ class RevocationService(val agent: Agent) {
         )
         val revocationRegistryDelta = Json.decodeFromString<RevocationRegistryDelta>(revocationRegistryDeltaJson)
         val credentialRevocationIdInt = credentialRevocationId.toInt()
-        val revoked = revocationRegistryDelta.value.revoked?.contains(credentialRevocationIdInt) ?: false
+        val revoked = revocationRegistryDelta.revoked?.contains(credentialRevocationIdInt) ?: false
         return Pair(revoked, deltaTimestamp)
     }
 
-    suspend fun createRevocationState(proofRequestJson: String, requestedCredentials: RequestedCredentials): String {
+    suspend fun createRevocationState(
+        credential: Credential,
+        timestamp: Int,
+    ): CredentialRevocationState {
+        val credentialRevocationId = credential.revRegIndex()
+            ?: throw Exception("Credential does not have revocation information.")
+        val revocationRegistryId = credential.revRegId()
+            ?: throw Exception("Credential does not have revocation information.")
+
+        val revocationRegistryDefinition = RevocationRegistryDefinition(
+            agent.ledgerService.getRevocationRegistryDefinition(revocationRegistryId),
+        )
+        val (revocationRegistryDelta, deltaTimestamp) = agent.ledgerService.getRevocationRegistryDelta(
+            revocationRegistryId,
+            timestamp,
+            0,
+        )
+        val tailsFile = downloadTails(revocationRegistryDefinition)
+
+        return Prover().createRevocationState(
+            revocationRegistryDefinition,
+            anoncreds_uniffi.RevocationRegistryDelta(revocationRegistryDelta),
+            deltaTimestamp.toULong(),
+            credentialRevocationId,
+            tailsFile.absolutePath,
+        )
+    }
+
+    suspend fun createRevocationStates(proofRequestJson: String, requestedCredentials: RequestedCredentials): String {
         val revocationStates = mutableMapOf<String, MutableMap<String, JsonObject>>()
         val referentCredentials = mutableListOf<ReferentCredential>()
 
@@ -99,7 +156,7 @@ class RevocationService(val agent: Agent) {
             if (requestRevocationInterval != null && credentialRevocationId != null && revocationRegistryId != null) {
                 assertRevocationInterval(requestRevocationInterval)
 
-                val revocationRegistryDefinition = agent.ledgerService.getRevocationRegistryDefinition(revocationRegistryId)
+                val revocationRegistryDefinition = RevocationRegistryDefinition(agent.ledgerService.getRevocationRegistryDefinition(revocationRegistryId))
                 val (revocationRegistryDelta, deltaTimestamp) = agent.ledgerService.getRevocationRegistryDelta(
                     revocationRegistryId,
                     requestRevocationInterval.to!!,
@@ -107,19 +164,19 @@ class RevocationService(val agent: Agent) {
                 )
                 val tailsReader = downloadTails(revocationRegistryDefinition)
 
-                val revocationStateJson = Anoncreds.createRevocationState(
-                    tailsReader.blobStorageReaderHandle,
+                val revocationState = Prover().createRevocationState(
                     revocationRegistryDefinition,
-                    revocationRegistryDelta,
-                    deltaTimestamp.toLong(),
-                    credentialRevocationId,
-                ).await()
-                val revocationState = Json.decodeFromString<JsonObject>(revocationStateJson)
+                    anoncreds_uniffi.RevocationRegistryDelta(revocationRegistryDelta),
+                    deltaTimestamp.toULong(),
+                    credentialRevocationId.toUInt(),
+                    tailsReader.absolutePath,
+                )
+                val revocationStateObj = Json.decodeFromString<JsonObject>(revocationState.toJson())
 
                 if (revocationStates[revocationRegistryId] == null) {
                     revocationStates[revocationRegistryId] = mutableMapOf()
                 }
-                revocationStates[revocationRegistryId]!![deltaTimestamp.toString()] = revocationState
+                revocationStates[revocationRegistryId]!![deltaTimestamp.toString()] = revocationStateObj
             }
         }
 
@@ -139,37 +196,26 @@ class RevocationService(val agent: Agent) {
         }
     }
 
-    fun parseRevocationRegistryDefinition(revocationRegistryDefinitionJson: String): Pair<String, String> {
-        val revocationRegistryDefinition = Json.decodeFromString<JsonObject>(revocationRegistryDefinitionJson)
-        val value = revocationRegistryDefinition["value"]?.jsonObject
-        val tailsLocation = value?.get("tailsLocation")?.jsonPrimitive?.content
-        val tailsHash = value?.get("tailsHash")?.jsonPrimitive?.content
-        if (tailsLocation == null || tailsHash == null) {
-            throw Exception("Could not parse tailsLocation and tailsHash from revocation registry definition")
-        }
-        return Pair(tailsLocation, tailsHash)
-    }
-
-    suspend fun downloadTails(revocationRegistryDefinition: String): BlobStorageReader {
-        val (tailsLocation, tailsHash) = parseRevocationRegistryDefinition(revocationRegistryDefinition)
+    suspend fun downloadTails(revocationRegistryDefinition: RevocationRegistryDefinition): File {
+        logger.debug("Downloading tails file for revocation registry definition: ${revocationRegistryDefinition.revRegId()}")
         val tailsFolder = File(agent.context.filesDir.absolutePath, "tails")
         if (!tailsFolder.exists()) {
             tailsFolder.mkdir()
         }
 
-        val tailsFile = File(tailsFolder, tailsHash)
+        val tailsFile = File(tailsFolder, revocationRegistryDefinition.tailsHash())
         if (!tailsFile.exists()) {
-            val url = URL(tailsLocation)
+            val tailsLocation = revocationRegistryDefinition.tailsLocation()
+            logger.debug("Downloading tails file from: $tailsLocation")
+            val url = if (tailsLocation.startsWith("http")) {
+                URL(tailsLocation)
+            } else {
+                File(tailsLocation).toURI().toURL()
+            }
             val tailsData = url.readBytes()
             tailsFile.writeBytes(tailsData)
         }
 
-        return createTailsReader(tailsFile.absolutePath)
-    }
-
-    suspend fun createTailsReader(filePath: String): BlobStorageReader {
-        val dirname = filePath.split("/").dropLast(1).joinToString("/")
-        val tailsReaderConfig = mapOf("base_dir" to dirname).toJsonString()
-        return BlobStorageReader.openReader("default", tailsReaderConfig).await()
+        return tailsFile
     }
 }
