@@ -23,26 +23,28 @@ Aries Framework Kotlin supports most of [AIP 1.0](https://github.com/hyperledger
 
 ## Requirements & Installation
 
-Aries Framework Kotlin requires Android 7.0+. It is not available on Maven Central yet.
+Aries Framework Kotlin requires Android 7.0+. It is distributed as a Maven package hosted by GitHub Packages.
 
-Clone this repo and add a dependency to your app's build.gradle file:
+You can add a dependency to your app's build.gradle file:
 ```groovy
 dependencies {
-    implementation project('path_to_ariesframework')
+    implementation("org.hyperledger:aries-framework-kotlin:2.0.0")
 }
 ```
 
-You need additional dependencies if you include the framework as an AAR file:
+You need to add the following to your project's build.gradle file to use GitHub Packages:
 ```groovy
-dependencies {
-    implementation files('path_to_aar_file')
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0"
-    implementation 'org.slf4j:slf4j-api:1.7.32'
-    implementation 'ch.qos.logback:logback-classic:1.2.6'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.0'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.7.0'
-    implementation 'org.jetbrains.kotlinx:kotlinx-datetime:0.4.0'
-    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+allprojects {
+    repositories {
+        maven {
+            setUrl("https://maven.pkg.github.com/hyperledger/aries-framework-kotlin")
+            credentials {
+                // You should put these in the local.properties file
+                username = "your github username"
+                password = "your github token for read:packages"
+            }
+        }
+    }
 }
 ```
 
@@ -74,7 +76,7 @@ To create an agent, first create a key to encrypt the wallet and save it in the 
     val key = Agent.generateWalletKey()
 ```
 
-A genesis file for the indy pool should be included as a resource in the app bundle and should be copyed to the file system before initializing the agent.
+A genesis file for the indy pool should be included as a resource in the app bundle and should be copied to the file system before initializing the agent.
 ```kotlin
     val genesisPath = "genesis.txn"
     val inputStream = applicationContext.assets.open(genesisPath)
