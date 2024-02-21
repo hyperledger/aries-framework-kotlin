@@ -5,20 +5,40 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
+ext["githubUsername"] = null
+ext["githubToken"] = null
+
+def secretPropsFile = file("local.properties")
+if (secretPropsFile.exists()) {
+    Properties properties = new Properties()
+    secretPropsFile.withInputStream { properties.load(it) }
+    properties.each { k, v -> ext[k] = v }
+} else {
+    ext["githubUsername"] = System.getenv("GITHUB_ACTOR")
+    ext["githubToken"] = System.getenv("GITHUB_TOKEN")
+}
+
+def getExtraString(name) {
+    return ext[name] ?: ""
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
+        mavenLocal()
         mavenCentral()
         maven {
             setUrl("https://maven.pkg.github.com/hyperledger/aries-uniffi-wrappers")
             credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
+                username = getExtraString("githubUsername")
+                password = getExtraString("githubToken")
             }
         }
     }
 }
+
 rootProject.name = "aries-framework-kotlin"
 include ':app'
 include ':ariesframework'

@@ -68,14 +68,41 @@ dependencies {
     androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.0"
 }
 
+ext["githubUsername"] = null
+ext["githubToken"] = null
+
+def secretPropsFile = project.rootProject.file("local.properties")
+if (secretPropsFile.exists()) {
+    Properties properties = new Properties()
+    secretPropsFile.withInputStream { properties.load(it) }
+    properties.each { k, v -> ext[k] = v }
+} else {
+    ext["githubUsername"] = System.getenv("GITHUB_ACTOR")
+    ext["githubToken"] = System.getenv("GITHUB_TOKEN")
+}
+
+def getExtraString(name) {
+    return ext[name] ?: ""
+}
+
 afterEvaluate {
     publishing {
+        repositories {
+            maven {
+                name = "github"
+                setUrl("https://maven.pkg.github.com/hyperledger/aries-framework-kotlin")
+                credentials {
+                    username = getExtraString("githubUsername")
+                    password = getExtraString("githubToken")
+                }
+            }
+        }
         publications {
             release(MavenPublication) {
                 from components.release
                 groupId 'org.hyperledger'
                 artifactId 'aries-framework-kotlin'
-                version '1.0.0'
+                version '2.0.0'
             }
         }
     }
