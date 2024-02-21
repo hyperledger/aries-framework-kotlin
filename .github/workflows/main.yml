@@ -24,3 +24,5 @@ jobs:
           path: 'ariesframework/build/reports/ktlint/**/*.xml'
       - name: Build
         run: ./gradlew assembleDebug
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
