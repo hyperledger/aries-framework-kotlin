@@ -79,6 +79,7 @@ if (secretPropsFile.exists()) {
 } else {
     ext["githubUsername"] = System.getenv("GITHUB_ACTOR")
     ext["githubToken"] = System.getenv("GITHUB_TOKEN")
+    ext["version"] = System.getenv("VERSION")
 }
 
 def getExtraString(name) {
@@ -102,7 +103,7 @@ afterEvaluate {
                 from components.release
                 groupId 'org.hyperledger'
                 artifactId 'aries-framework-kotlin'
-                version '2.0.0'
+                version getExtraString("version")
             }
         }
     }
