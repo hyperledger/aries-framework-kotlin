@@ -23,7 +23,7 @@ jobs:
         - name: Publish
           run: ./gradlew publishAllPublicationsToGithubRepository
           env:
-            VERSION: ${{ github.ref }}
+            VERSION: ${{ github.ref_name }}
         - name: Create Release
           id: create_release
           uses: softprops/action-gh-release@v1
