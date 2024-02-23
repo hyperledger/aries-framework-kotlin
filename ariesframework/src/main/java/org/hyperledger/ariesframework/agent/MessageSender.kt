@@ -116,7 +116,7 @@ class MessageSender(val agent: Agent) {
                 return listOf(service)
             }
             if (connection.outOfBandInvitation != null) {
-                return connection.outOfBandInvitation!!.services.mapNotNull { it.asDidDocService() as DidComm }
+                return connection.outOfBandInvitation!!.services.mapNotNull { it.asDidCommService() }
             }
         }
 

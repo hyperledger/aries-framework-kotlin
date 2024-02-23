@@ -184,7 +184,7 @@ class AgentTest {
         agent = alice
         alice.initialize()
 
-        val faberConfig = TestHelper.getBaseConfig()
+        val faberConfig = TestHelper.getBaseConfig("faber")
         faberConfig.mediatorPickupStrategy = MediatorPickupStrategy.Implicit
         faberConfig.mediatorConnectionsInvite = publicMediatorUrl
         faberConfig.mediatorPollingInterval = 1
@@ -192,7 +192,7 @@ class AgentTest {
         val faber = Agent(context, faberConfig)
         faber.initialize()
 
-        val (aliceConnection, faberConnection) = TestHelper.makeConnection(alice, faber, 2.seconds)
+        val (aliceConnection, faberConnection) = TestHelper.makeConnection(alice, faber, 3.seconds)
         assertEquals(aliceConnection.state, ConnectionState.Complete)
         assertEquals(faberConnection.state, ConnectionState.Complete)
 

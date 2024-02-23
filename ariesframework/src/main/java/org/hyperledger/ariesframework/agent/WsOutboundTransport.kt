@@ -56,7 +56,7 @@ class WsOutboundTransport(val agent: Agent) : OutboundTransport, WebSocketListen
     }
 
     override fun onMessage(webSocket: WebSocket, text: String) {
-        logger.debug("Received message: {}", text)
+        logger.debug("Agent ${agent.agentConfig.label} received a message string")
         val encryptedMessage = Json.decodeFromString<EncryptedMessage>(text)
         GlobalScope.launch {
             agent.receiveMessage(encryptedMessage)
@@ -64,7 +64,7 @@ class WsOutboundTransport(val agent: Agent) : OutboundTransport, WebSocketListen
     }
 
     override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-        logger.debug("Received message: {}", bytes.utf8())
+        logger.debug("Agent ${agent.agentConfig.label} received a message bytes.")
         val encryptedMessage = Json.decodeFromString<EncryptedMessage>(bytes.utf8())
         GlobalScope.launch {
             agent.receiveMessage(encryptedMessage)

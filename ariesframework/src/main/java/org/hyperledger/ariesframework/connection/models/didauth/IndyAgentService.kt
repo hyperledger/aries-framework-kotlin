@@ -12,4 +12,4 @@ class IndyAgentService(
     override val routingKeys: List<String>? = null,
     override val priority: Int? = 0,
     override val accept: List<String>? = null,
-) : DidComm
+) : DidDocService(), DidComm

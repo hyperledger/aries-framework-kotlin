@@ -11,6 +11,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
+import org.hyperledger.ariesframework.connection.models.didauth.DidDocService
 import org.hyperledger.ariesframework.proofs.models.RequestedCredentials
 import org.hyperledger.ariesframework.util.concurrentForEach
 import org.hyperledger.ariesframework.util.concurrentMap
@@ -29,6 +30,14 @@ sealed class Service {
     abstract val id: String
 }
 
+interface DidComm {
+    val id: String
+    val serviceEndpoint: String
+    val recipientKeys: List<String>
+    val routingKeys: List<String>?
+    val priority: Int?
+}
+
 @Serializable
 @SerialName("DidDocumentService")
 data class Service1(
@@ -40,11 +49,11 @@ data class Service1(
 @SerialName("IndyAgent")
 data class Service2(
     override val id: String,
-    val serviceEndpoint: String,
-    val recipientKeys: List<String>,
-    val routingKeys: List<String>,
-    val priority: Int,
-) : Service()
+    override val serviceEndpoint: String,
+    override val recipientKeys: List<String>,
+    override val routingKeys: List<String>,
+    override val priority: Int,
+) : Service(), DidComm
 
 @Serializable
 @SerialName("did-communication")

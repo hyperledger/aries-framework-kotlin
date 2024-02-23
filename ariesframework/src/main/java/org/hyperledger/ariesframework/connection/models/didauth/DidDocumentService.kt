@@ -8,4 +8,4 @@ import kotlinx.serialization.Serializable
 class DidDocumentService(
     override val id: String,
     override val serviceEndpoint: String,
-) : DidDocService
+) : DidDocService()
