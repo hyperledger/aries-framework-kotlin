@@ -70,6 +70,7 @@ dependencies {
 
 ext["githubUsername"] = null
 ext["githubToken"] = null
+ext["version"] = "2.0.0"
 
 def secretPropsFile = project.rootProject.file("local.properties")
 if (secretPropsFile.exists()) {
@@ -82,10 +83,14 @@ if (secretPropsFile.exists()) {
     ext["version"] = System.getenv("VERSION")
 }
 
-ext["version"] = ext["version"]?.replaceFirst("v", "")
+ext["version"] = ext["version"].replaceFirst("v", "")
 
 def getExtraString(name) {
-    return ext[name] ?: ""
+    try {
+        return ext[name]
+    } catch (ignored) {
+        return ""
+    }
 }
 
 afterEvaluate {

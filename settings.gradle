@@ -20,7 +20,11 @@ if (secretPropsFile.exists()) {
 }
 
 def getExtraString(name) {
-    return ext[name] ?: ""
+    try {
+        return ext[name]
+    } catch (ignored) {
+        return ""
+    }
 }
 
 dependencyResolutionManagement {
