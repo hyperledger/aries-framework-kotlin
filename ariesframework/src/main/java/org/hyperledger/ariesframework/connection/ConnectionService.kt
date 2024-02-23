@@ -300,6 +300,7 @@ class ConnectionService(val agent: Agent) {
     suspend fun createResponse(connectionId: String): OutboundMessage {
         logger.debug("Creating connection response for connection: $connectionId")
         var connectionRecord = connectionRepository.getById(connectionId)
+        logger.debug("Connection record: {}", Json.encodeToString(connectionRecord))
         assert(connectionRecord.state == ConnectionState.Requested)
         assert(connectionRecord.role == ConnectionRole.Inviter)
         val threadId = connectionRecord.threadId ?: throw Exception("Connection record with id ${connectionRecord.id} has no thread id.")

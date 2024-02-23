@@ -23,6 +23,7 @@ import org.hyperledger.ariesframework.proofs.models.AutoAcceptProof
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.UUID
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 object TestHelper {
@@ -182,12 +183,14 @@ object TestHelper {
         )
     }
 
-    suspend fun makeConnection(agentA: Agent, agentB: Agent): Pair<ConnectionRecord, ConnectionRecord> {
+    suspend fun makeConnection(agentA: Agent, agentB: Agent, waitFor: Duration = 0.1.seconds): Pair<ConnectionRecord, ConnectionRecord> {
         logger.debug("Making connection")
         val message = agentA.connections.createConnection()
         val invitation = message.payload as ConnectionInvitationMessage
         var agentAConnection = message.connection
         var agentBConnection = agentB.connections.receiveInvitation(invitation)
+
+        delay(waitFor)
 
         agentAConnection = agentA.connectionRepository.getById(agentAConnection.id)
         agentBConnection = agentB.connectionRepository.getById(agentBConnection.id)
