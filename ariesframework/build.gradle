@@ -83,7 +83,7 @@ if (secretPropsFile.exists()) {
     ext["version"] = System.getenv("VERSION")
 }
 
-ext["version"] = ext["version"].replaceFirst("v", "")
+ext["version"] = ext["version"]?.replaceFirst("v", "")
 
 def getExtraString(name) {
     try {
