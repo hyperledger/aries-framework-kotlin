@@ -11,6 +11,7 @@ import org.hyperledger.ariesframework.connection.models.didauth.DidComm
 import org.hyperledger.ariesframework.connection.models.didauth.DidCommService
 import org.hyperledger.ariesframework.connection.repository.ConnectionRecord
 import org.hyperledger.ariesframework.routing.messages.BatchPickupMessage
+import org.hyperledger.ariesframework.routing.messages.ForwardMessage
 import org.slf4j.LoggerFactory
 
 class MessageSender(val agent: Agent) {
@@ -115,7 +116,7 @@ class MessageSender(val agent: Agent) {
                 return listOf(service)
             }
             if (connection.outOfBandInvitation != null) {
-                return connection.outOfBandInvitation!!.services.mapNotNull { it.asDidDocService() as DidComm }
+                return connection.outOfBandInvitation!!.services.mapNotNull { it.asDidCommService() }
             }
         }
 
@@ -123,7 +124,7 @@ class MessageSender(val agent: Agent) {
     }
 
     private suspend fun sendMessageToService(message: AgentMessage, service: DidComm, senderKey: String, connectionId: String) {
-        val keys = EnvelopeKeys(service.recipientKeys, emptyList(), senderKey)
+        val keys = EnvelopeKeys(service.recipientKeys, service.routingKeys ?: emptyList(), senderKey)
 
         val outboundPackage = packMessage(message, keys, service.serviceEndpoint, connectionId)
         val outboundTransport = outboundTransportForEndpoint(service.serviceEndpoint)
@@ -132,9 +133,18 @@ class MessageSender(val agent: Agent) {
     }
 
     private suspend fun packMessage(message: AgentMessage, keys: EnvelopeKeys, endpoint: String, connectionId: String): OutboundPackage {
-        val encryptedMessage = agent.wallet.pack(message, keys.recipientKeys, keys.senderKey)
+        var encryptedMessage = agent.wallet.pack(message, keys.recipientKeys, keys.senderKey)
 
-        // TODO: support message forwarding
+        var recipientKeys = keys.recipientKeys
+        for (routingKey in keys.routingKeys) {
+            val forwardMessage = ForwardMessage(recipientKeys[0], encryptedMessage)
+            if (agent.agentConfig.useLegacyDidSovPrefix) {
+                forwardMessage.replaceNewDidCommPrefixWithLegacyDidSov()
+            }
+            recipientKeys = listOf(routingKey)
+            encryptedMessage = agent.wallet.pack(forwardMessage, recipientKeys, keys.senderKey)
+        }
+
         return OutboundPackage(encryptedMessage, message.requestResponse(), endpoint, connectionId)
     }
 

@@ -1,15 +1,19 @@
 package org.hyperledger.ariesframework.connection.models.didauth
 
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 
-interface DidDocService {
-    val id: String
-    val serviceEndpoint: String
+@Serializable
+sealed class DidDocService {
+    abstract val id: String
+    abstract val serviceEndpoint: String
 }
 
-interface DidComm : DidDocService {
+interface DidComm {
+    val id: String
+    val serviceEndpoint: String
     val recipientKeys: List<String>
     val routingKeys: List<String>?
     val priority: Int?

@@ -21,6 +21,7 @@ import org.hyperledger.ariesframework.routing.handlers.MediationDenyHandler
 import org.hyperledger.ariesframework.routing.handlers.MediationGrantHandler
 import org.hyperledger.ariesframework.routing.messages.BatchMessage
 import org.hyperledger.ariesframework.routing.messages.BatchPickupMessage
+import org.hyperledger.ariesframework.routing.messages.ForwardMessage
 import org.hyperledger.ariesframework.routing.messages.KeylistUpdate
 import org.hyperledger.ariesframework.routing.messages.KeylistUpdateAction
 import org.hyperledger.ariesframework.routing.messages.KeylistUpdateMessage
@@ -32,6 +33,7 @@ import org.hyperledger.ariesframework.routing.repository.MediationRecord
 import org.hyperledger.ariesframework.routing.repository.MediationRepository
 import org.hyperledger.ariesframework.routing.repository.MediationRole
 import org.hyperledger.ariesframework.routing.repository.MediationState
+import org.hyperledger.ariesframework.util.DIDParser
 import org.slf4j.LoggerFactory
 import java.util.Timer
 import kotlin.concurrent.timer
@@ -66,6 +68,7 @@ class MediationRecipient(private val agent: Agent, private val dispatcher: Dispa
         MessageSerializer.registerMessage(MediationDenyMessage.type, MediationDenyMessage::class)
         MessageSerializer.registerMessage(MediationGrantMessage.type, MediationGrantMessage::class)
         MessageSerializer.registerMessage(MediationRequestMessage.type, MediationRequestMessage::class)
+        MessageSerializer.registerMessage(ForwardMessage.type, ForwardMessage::class)
     }
 
     suspend fun getRouting(): Routing {
@@ -224,7 +227,13 @@ class MediationRecipient(private val agent: Agent, private val dispatcher: Dispa
         mediationRecord.assertState(MediationState.Requested)
 
         mediationRecord.endpoint = message.endpoint
-        mediationRecord.routingKeys = message.routingKeys
+        mediationRecord.routingKeys = message.routingKeys.map {key ->
+            if (key.startsWith("did:key:")) {
+                DIDParser.convertDidKeyToVerkey(key)
+            } else {
+                key
+            }
+        }
         mediationRecord.state = MediationState.Granted
         repository.update(mediationRecord)
         agent.eventBus.publish(AgentEvents.MediationEvent(mediationRecord.copy()))

@@ -68,14 +68,14 @@ object MessageSerializer : JsonContentPolymorphicSerializer<AgentMessage>(AgentM
         return if (serializers.containsKey(type)) {
             serializers[type]!!
         } else {
-            logger.warn("Message type $type is not registered for JSON decoding")
+            logger.error("Message type $type is not registered for JSON decoding")
             AgentMessage.serializer()
         }
     }
 
     fun encodeToString(message: AgentMessage): String {
         if (!serializers.containsKey(message.type)) {
-            logger.warn("Message type ${message.type} is not registered for JSON encoding")
+            logger.error("Message type ${message.type} is not registered for JSON encoding")
             return Json.encodeToString(message)
         }
         return encoder.encodeToString(serializers[message.type]!!, message)

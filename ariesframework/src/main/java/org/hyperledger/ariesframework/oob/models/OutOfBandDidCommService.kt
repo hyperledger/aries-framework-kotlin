@@ -16,7 +16,7 @@ import org.hyperledger.ariesframework.util.DIDParser
 
 @Serializable(with = OutOfBandDidCommServiceSerializer::class)
 abstract class OutOfBandDidCommService {
-    abstract fun asDidDocService(): DidDocService?
+    abstract fun asDidCommService(): DidCommService?
 }
 
 object OutOfBandDidCommServiceSerializer : JsonContentPolymorphicSerializer<OutOfBandDidCommService>(OutOfBandDidCommService::class) {
@@ -35,7 +35,7 @@ class OutOfBandDidDocumentService(
     val routingKeys: List<String>? = null,
     val accept: List<String>? = null,
 ) : OutOfBandDidCommService() {
-    override fun asDidDocService(): DidDocService? {
+    override fun asDidCommService(): DidCommService? {
         return DidCommService(
             id,
             serviceEndpoint,
@@ -49,7 +49,7 @@ class OutOfBandDidDocumentService(
 class PublicDidService(
     val did: String,
 ) : OutOfBandDidCommService() {
-    override fun asDidDocService(): DidDocService? {
+    override fun asDidCommService(): DidCommService? {
         return null
     }
 }

@@ -22,6 +22,7 @@ class AgentTest {
     lateinit var agent: Agent
     private val mediatorInvitationUrl = "http://10.0.2.2:3001/invitation"
     private val agentInvitationUrl = "http://10.0.2.2:3002/invitation"
+    private val publicMediatorUrl = "https://public.mediator.indiciotech.io?c_i=eyJAdHlwZSI6ICJkaWQ6c292OkJ6Q2JzTlloTXJqSGlxWkRUVUFTSGc7c3BlYy9jb25uZWN0aW9ucy8xLjAvaW52aXRhdGlvbiIsICJAaWQiOiAiMDVlYzM5NDItYTEyOS00YWE3LWEzZDQtYTJmNDgwYzNjZThhIiwgInNlcnZpY2VFbmRwb2ludCI6ICJodHRwczovL3B1YmxpYy5tZWRpYXRvci5pbmRpY2lvdGVjaC5pbyIsICJyZWNpcGllbnRLZXlzIjogWyJDc2dIQVpxSktuWlRmc3h0MmRIR3JjN3U2M3ljeFlEZ25RdEZMeFhpeDIzYiJdLCAibGFiZWwiOiAiSW5kaWNpbyBQdWJsaWMgTWVkaWF0b3IifQ==" // ktlint-disable max-line-length
 
     @After
     fun tearDown() = runTest {
@@ -31,7 +32,7 @@ class AgentTest {
     @Test @LargeTest
     fun testConnection() = runTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val url = "https://public.mediator.indiciotech.io?c_i=eyJAdHlwZSI6ICJkaWQ6c292OkJ6Q2JzTlloTXJqSGlxWkRUVUFTSGc7c3BlYy9jb25uZWN0aW9ucy8xLjAvaW52aXRhdGlvbiIsICJAaWQiOiAiMDVlYzM5NDItYTEyOS00YWE3LWEzZDQtYTJmNDgwYzNjZThhIiwgInNlcnZpY2VFbmRwb2ludCI6ICJodHRwczovL3B1YmxpYy5tZWRpYXRvci5pbmRpY2lvdGVjaC5pbyIsICJyZWNpcGllbnRLZXlzIjogWyJDc2dIQVpxSktuWlRmc3h0MmRIR3JjN3U2M3ljeFlEZ25RdEZMeFhpeDIzYiJdLCAibGFiZWwiOiAiSW5kaWNpbyBQdWJsaWMgTWVkaWF0b3IifQ==" // ktlint-disable max-line-length
+        val url = publicMediatorUrl
         val invitation = ConnectionInvitationMessage.fromUrl(url)
 
         agent = Agent(context, TestHelper.getBaseConfig())
@@ -169,4 +170,34 @@ class AgentTest {
 
         delay(120.seconds)
     }
+
+    // For two agents behind mediators to connect, message forward is needed.
+    @Test @LargeTest
+    fun testMessageForward() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val aliceConfig = TestHelper.getBaseConfig("alice")
+        aliceConfig.mediatorPickupStrategy = MediatorPickupStrategy.Implicit
+        aliceConfig.mediatorConnectionsInvite = publicMediatorUrl
+        aliceConfig.mediatorPollingInterval = 1
+
+        val alice = Agent(context, aliceConfig)
+        agent = alice
+        alice.initialize()
+
+        val faberConfig = TestHelper.getBaseConfig("faber")
+        faberConfig.mediatorPickupStrategy = MediatorPickupStrategy.Implicit
+        faberConfig.mediatorConnectionsInvite = publicMediatorUrl
+        faberConfig.mediatorPollingInterval = 1
+
+        val faber = Agent(context, faberConfig)
+        faber.initialize()
+
+        val (aliceConnection, faberConnection) = TestHelper.makeConnection(alice, faber, 3.seconds)
+        assertEquals(aliceConnection.state, ConnectionState.Complete)
+        assertEquals(faberConnection.state, ConnectionState.Complete)
+
+        // alice will be reset on tearDown
+        faber.reset()
+    }
+
 }
