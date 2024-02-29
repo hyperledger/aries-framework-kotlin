@@ -46,9 +46,9 @@ ktlint {
 }
 
 dependencies {
-    implementation("org.hyperledger:anoncreds_uniffi:0.1.1-wrapper.1")
-    implementation("org.hyperledger:indy_vdr_uniffi:0.1.1-wrapper.1")
-    implementation("org.hyperledger:askar_uniffi:0.1.1-wrapper.1")
+    implementation("org.hyperledger:anoncreds_uniffi:0.2.0-wrapper.1")
+    implementation("org.hyperledger:indy_vdr_uniffi:0.2.0-wrapper.1")
+    implementation("org.hyperledger:askar_uniffi:0.2.0-wrapper.1")
 
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0"
     implementation 'org.slf4j:slf4j-api:1.7.32'
