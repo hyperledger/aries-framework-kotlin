@@ -1,6 +1,5 @@
 package org.hyperledger.ariesframework.oob
 
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.hyperledger.ariesframework.agent.MessageSerializer
 import org.hyperledger.ariesframework.connection.messages.TrustPingMessage
@@ -51,7 +50,7 @@ class OutOfBandInvitationTest {
         assertEquals(invitation.goal, "To issue a Faber College Graduate credential")
         assertEquals(
             invitation.handshakeProtocols,
-            listOf(HandshakeProtocol.DidExchange, HandshakeProtocol.Connections),
+            listOf(HandshakeProtocol.DidExchange10, HandshakeProtocol.Connections),
         )
         if (invitation.services[0] is PublicDidService) {
             assertEquals((invitation.services[0] as PublicDidService).did, "did:sov:LjgpST2rjsoxYegQDRm7EL")

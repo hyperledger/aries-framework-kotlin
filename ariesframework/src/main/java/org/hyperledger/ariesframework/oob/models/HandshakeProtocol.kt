@@ -9,5 +9,8 @@ enum class HandshakeProtocol {
     Connections,
 
     @SerialName("https://didcomm.org/didexchange/1.0")
-    DidExchange,
+    DidExchange10,
+
+    @SerialName("https://didcomm.org/didexchange/1.1")
+    DidExchange11,
 }
