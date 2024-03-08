@@ -10,7 +10,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
-import org.hyperledger.ariesframework.connection.models.didauth.DidDocService
 import org.hyperledger.ariesframework.proofs.models.RequestedCredentials
 import org.hyperledger.ariesframework.util.concurrentForEach
 import org.hyperledger.ariesframework.util.concurrentMap

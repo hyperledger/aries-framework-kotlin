@@ -5,10 +5,9 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.hyperledger.ariesframework.EncryptedMessage
 import org.hyperledger.ariesframework.OutboundPackage
@@ -28,7 +27,9 @@ class HttpOutboundTransport(val agent: Agent) : OutboundTransport {
         val responseText = withContext(Dispatchers.IO) {
             val request = okhttp3.Request.Builder()
                 .url(_package.endpoint)
-                .post(Json.encodeToString(_package.payload).toRequestBody(DidCommMimeType.V1.value.toMediaTypeOrNull()))
+                .post(Json.encodeToString(_package.payload)
+                    .toByteArray()  // prevent okHttp from adding charset=utf-8 to the content type
+                    .toRequestBody(DidCommMimeType.V1.value.toMediaType()))
                 .build()
             val response = AgentHttpClient.client.newCall(request).execute()
             logger.debug("response with status code: {}", response.code)

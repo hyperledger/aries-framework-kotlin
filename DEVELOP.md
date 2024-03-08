@@ -66,12 +66,6 @@ These tests use `TestHelper.prepareForIssuance()` to register a schema and a cre
 
 `AgentTest` requires a mediator and another agent to offer credentials. We use Aries Framework Javascript for this purpose.
 
-First, we need to install Indy SDK on Mac.
-```bash
-$ brew tap conanoc/libindy
-$ brew install --build-from-source libindy
-```
-
 Clone the forked Aries Framework Javascript repository.
 ```bash
 git clone https://github.com/conanoc/aries-framework-javascript.git
