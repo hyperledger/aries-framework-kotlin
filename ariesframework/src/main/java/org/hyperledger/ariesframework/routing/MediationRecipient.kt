@@ -227,7 +227,7 @@ class MediationRecipient(private val agent: Agent, private val dispatcher: Dispa
         mediationRecord.assertState(MediationState.Requested)
 
         mediationRecord.endpoint = message.endpoint
-        mediationRecord.routingKeys = message.routingKeys.map {key ->
+        mediationRecord.routingKeys = message.routingKeys.map { key ->
             if (key.startsWith("did:key:")) {
                 DIDParser.convertDidKeyToVerkey(key)
             } else {

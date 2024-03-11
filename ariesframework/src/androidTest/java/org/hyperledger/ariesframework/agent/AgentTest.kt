@@ -199,5 +199,4 @@ class AgentTest {
         // alice will be reset on tearDown
         faber.reset()
     }
-
 }
