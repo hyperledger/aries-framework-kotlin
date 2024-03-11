@@ -27,9 +27,11 @@ class HttpOutboundTransport(val agent: Agent) : OutboundTransport {
         val responseText = withContext(Dispatchers.IO) {
             val request = okhttp3.Request.Builder()
                 .url(_package.endpoint)
-                .post(Json.encodeToString(_package.payload)
-                    .toByteArray()  // prevent okHttp from adding charset=utf-8 to the content type
-                    .toRequestBody(DidCommMimeType.V1.value.toMediaType()))
+                .post(
+                    Json.encodeToString(_package.payload)
+                        .toByteArray() // prevent okHttp from adding charset=utf-8 to the content type
+                        .toRequestBody(DidCommMimeType.V1.value.toMediaType()),
+                )
                 .build()
             val response = AgentHttpClient.client.newCall(request).execute()
             logger.debug("response with status code: {}", response.code)

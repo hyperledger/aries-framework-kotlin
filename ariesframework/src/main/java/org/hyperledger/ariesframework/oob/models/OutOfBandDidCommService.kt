@@ -11,7 +11,6 @@ import kotlinx.serialization.json.JsonContentPolymorphicSerializer
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import org.hyperledger.ariesframework.connection.models.didauth.DidCommService
-import org.hyperledger.ariesframework.connection.models.didauth.DidDocService
 import org.hyperledger.ariesframework.util.DIDParser
 
 @Serializable(with = OutOfBandDidCommServiceSerializer::class)

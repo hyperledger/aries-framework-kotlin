@@ -10,6 +10,8 @@ import indy_vdr_uniffi.Pool
 import indy_vdr_uniffi.Request
 import indy_vdr_uniffi.openPool
 import indy_vdr_uniffi.setProtocolVersion
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -59,8 +61,12 @@ class LedgerService(val agent: Agent) {
         } catch (e: Exception) {
             throw Exception("Pool opening failed: ${e.message}")
         }
-        val status = pool!!.getStatus()
-        logger.debug("Pool status: $status")
+
+        GlobalScope.launch {
+            pool?.refresh()
+            val status = pool?.getStatus()
+            logger.debug("Pool status after refresh: $status")
+        }
     }
 
     suspend fun registerSchema(did: DidInfo, schemaTemplate: SchemaTemplate): String {
