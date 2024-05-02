@@ -40,6 +40,7 @@ dependencyResolutionManagement {
                 password = getExtraString("githubToken")
             }
         }
+        maven { url 'https://jitpack.io' }
     }
 }
 

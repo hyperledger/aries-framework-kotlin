@@ -8,7 +8,6 @@ import kotlinx.serialization.modules.subclass
 @Serializable
 sealed class DidDocService {
     abstract val id: String
-    abstract val serviceEndpoint: String
 }
 
 interface DidComm {
@@ -23,6 +22,7 @@ interface DidComm {
 val didDocServiceModule = SerializersModule {
     polymorphic(DidDocService::class) {
         subclass(DidCommService::class)
+        subclass(DidCommV2Service::class)
         subclass(IndyAgentService::class)
         subclass(DidDocumentService::class)
         defaultDeserializer { DidDocumentService.serializer() }

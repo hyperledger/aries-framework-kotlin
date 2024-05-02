@@ -71,7 +71,7 @@ class MediationRecipient(private val agent: Agent, private val dispatcher: Dispa
         MessageSerializer.registerMessage(ForwardMessage.type, ForwardMessage::class)
     }
 
-    suspend fun getRouting(): Routing {
+    suspend fun getRoutingInfo(): Pair<List<String>, List<String>> {
         val mediator = repository.getDefault()
         val endpoints = if (mediator?.endpoint == null) {
             agent.agentConfig.endpoints
@@ -80,11 +80,16 @@ class MediationRecipient(private val agent: Agent, private val dispatcher: Dispa
         }
         val routingKeys = mediator?.routingKeys ?: emptyList()
 
+        return Pair(endpoints, routingKeys)
+    }
+
+    suspend fun getRouting(): Routing {
+        val (endpoints, routingKeys) = getRoutingInfo()
         val (did, verkey) = agent.wallet.createDid()
+        val mediator = repository.getDefault()
         if (agent.agentConfig.mediatorConnectionsInvite != null && mediator != null && mediator.isReady()) {
             keylistUpdate(mediator, verkey)
         }
-        logger.debug("Routing initialized with DID: $did, verkey: $verkey, endpoints: $endpoints, routingKeys: $routingKeys")
 
         return Routing(endpoints, verkey, did, routingKeys, mediator?.id)
     }

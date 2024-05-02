@@ -46,26 +46,27 @@ ktlint {
 }
 
 dependencies {
-    implementation("org.hyperledger:anoncreds_uniffi:0.2.0-wrapper.1")
-    implementation("org.hyperledger:indy_vdr_uniffi:0.2.1-wrapper.2")
-    implementation("org.hyperledger:askar_uniffi:0.2.0-wrapper.1")
+    implementation 'org.hyperledger:anoncreds_uniffi:0.2.0-wrapper.1'
+    implementation 'org.hyperledger:indy_vdr_uniffi:0.2.1-wrapper.2'
+    implementation 'org.hyperledger:askar_uniffi:0.2.0-wrapper.1'
 
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0"
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0'
     implementation 'org.slf4j:slf4j-api:1.7.32'
     implementation 'ch.qos.logback:logback-classic:1.2.6'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.7.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-datetime:0.4.0'
     implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+    implementation 'org.didcommx:peerdid:0.5.0'
 
     implementation 'androidx.core:core-ktx:1.7.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.8.0'
     testImplementation 'junit:junit:4.13.2'
-    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.0"
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.0'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.0"
+    androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.0'
 }
 
 ext["githubUsername"] = null

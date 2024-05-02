@@ -44,6 +44,7 @@ allprojects {
                 password = "your github token for read:packages"
             }
         }
+        maven { url 'https://jitpack.io' }
     }
 }
 ```
