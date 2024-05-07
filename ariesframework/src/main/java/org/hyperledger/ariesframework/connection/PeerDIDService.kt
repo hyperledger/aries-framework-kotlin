@@ -84,7 +84,7 @@ class PeerDIDService(val agent: Agent) {
      */
     suspend fun parsePeerDID(did: String): DidDoc {
         logger.debug("Parsing Peer DID: $did")
-        val json = resolvePeerDID(did)
+        val json = resolvePeerDID(did, VerificationMaterialFormatPeerDID.BASE58)
         logger.debug("Parsed Peer DID JSON: $json")
         val didDocument = DIDDocPeerDID.fromJson(json)
         return DidDoc(didDocument)

@@ -44,25 +44,26 @@ class DidDoc(
                 publicKey = publicKey[0].id
             )
         )
-        didDocument.service?.let {services ->
-            service = services.map {
-                when (it) {
+        didDocument.service?.let { services ->
+            service = services.map { service ->
+                when (service) {
                     is OtherService -> {
-                        val routingKeys = it.data["routingKeys"] as List<String>?
+                        val serviceEndpoint = service.data["serviceEndpoint"] as? Map<String, Any>
+                            ?: throw Exception("Service endpoint map not found in OtherService")
+                        val routingKeys = serviceEndpoint["routingKeys"] as? List<String>
                         val parsedRoutingKeys = routingKeys?.map { DIDParser.convertDidKeyToVerkey(it) }
                         DidCommService(
-                            id = it.data["id"] as String,
-                            serviceEndpoint = it.data["serviceEndpoint"] as String,
-                            recipientKeys = it.data["recipientKeys"] as List<String>,
+                            id = service.data["id"] as String,
+                            serviceEndpoint = serviceEndpoint["uri"] as String,
+                            recipientKeys = listOf(recipientKey),
                             routingKeys = parsedRoutingKeys,
-                            priority = it.data["priority"] as Int?
                         )
                     }
                     is DIDCommServicePeerDID -> {
-                        val parsedRoutingKeys = it.serviceEndpoint.routingKeys.map { DIDParser.convertDidKeyToVerkey(it) }
+                        val parsedRoutingKeys = service.serviceEndpoint.routingKeys.map { DIDParser.convertDidKeyToVerkey(it) }
                         DidCommService(
-                            id = it.id,
-                            serviceEndpoint = it.serviceEndpoint.uri,
+                            id = service.id,
+                            serviceEndpoint = service.serviceEndpoint.uri,
                             recipientKeys = listOf(recipientKey),
                             routingKeys = parsedRoutingKeys,
                         )
