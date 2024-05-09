@@ -88,7 +88,7 @@ class DidExchangeService(val agent: Agent) {
             true,
             null,
             null,
-            message.threadId
+            message.threadId,
         )
 
         connectionRepository.save(connectionRecord)

@@ -33,7 +33,7 @@ class JwsService(val agent: Agent) {
             mapOf(
                 "alg" to JsonPrimitive("EdDSA"),
                 "jwk" to jwk,
-            )
+            ),
         )
         val protectedHeaderJson = Json.encodeToString(protectedHeader)
         val base64ProtectedHeader = protectedHeaderJson.encodeToByteArray().encodeBase64url()
@@ -43,7 +43,7 @@ class JwsService(val agent: Agent) {
         val signature = key.signMessage(message, null)
         val base64Signature = signature.encodeBase64url()
         val header = mapOf(
-            "kid" to DIDParser.convertVerkeyToDidKey(verkey)
+            "kid" to DIDParser.convertVerkeyToDidKey(verkey),
         )
 
         return JwsGeneralFormat(header, base64Signature, base64ProtectedHeader)
@@ -58,7 +58,7 @@ class JwsService(val agent: Agent) {
      */
     fun verifyJws(jws: Jws, payload: ByteArray): Pair<Boolean, String> {
         logger.debug("Verifying JWS...")
-        val firstSig = when(jws) {
+        val firstSig = when (jws) {
             is JwsGeneralFormat -> jws
             is JwsFlattenedFormat -> jws.signatures.first()
             else -> throw Exception("Unsupported JWS type")

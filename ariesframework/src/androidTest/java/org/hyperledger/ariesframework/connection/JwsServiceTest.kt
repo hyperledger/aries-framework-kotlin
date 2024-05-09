@@ -39,8 +39,9 @@ class JwsServiceTest {
     @Test
     fun testCreateAndVerify() = runTest {
         val jws = agent.jwsService.createJws(payload, verkey)
-        Assert.assertEquals("did:key:z6MkfD6ccYE22Y9pHKtixeczk92MmMi2oJCP6gmNooZVKB9A",
-            jws.header?.get("kid")
+        Assert.assertEquals(
+            "did:key:z6MkfD6ccYE22Y9pHKtixeczk92MmMi2oJCP6gmNooZVKB9A",
+            jws.header?.get("kid"),
         )
         val protectedJson = jws.protected.decodeBase64url().decodeToString()
         val protected = Json.decodeFromString<JsonObject>(protectedJson)

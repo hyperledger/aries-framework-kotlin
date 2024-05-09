@@ -35,14 +35,14 @@ class DidDoc(
             Ed25119Sig2018(
                 id = "$id#1",
                 controller = id,
-                publicKeyBase58 = recipientKey
-            )
+                publicKeyBase58 = recipientKey,
+            ),
         )
         authentication = listOf(
             ReferencedAuthentication(
                 type = Ed25119Sig2018.type,
-                publicKey = publicKey[0].id
-            )
+                publicKey = publicKey[0].id,
+            ),
         )
         didDocument.service?.let { services ->
             service = services.map { service ->
