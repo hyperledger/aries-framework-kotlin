@@ -10,6 +10,7 @@ import org.hyperledger.ariesframework.anoncreds.storage.RevocationRegistryReposi
 import org.hyperledger.ariesframework.basicmessage.BasicMessageCommand
 import org.hyperledger.ariesframework.connection.ConnectionCommand
 import org.hyperledger.ariesframework.connection.ConnectionService
+import org.hyperledger.ariesframework.connection.JwsService
 import org.hyperledger.ariesframework.connection.PeerDIDService
 import org.hyperledger.ariesframework.connection.repository.ConnectionRepository
 import org.hyperledger.ariesframework.credentials.CredentialService
@@ -37,6 +38,7 @@ class Agent(val context: Context, val agentConfig: AgentConfig) {
     val connectionRepository = ConnectionRepository(this)
     val connectionService = ConnectionService(this)
     val peerDIDService = PeerDIDService(this)
+    val jwsService = JwsService(this)
     val connections = ConnectionCommand(this, dispatcher)
     val mediationRecipient = MediationRecipient(this, dispatcher)
     val outOfBandRepository = OutOfBandRepository(this)
