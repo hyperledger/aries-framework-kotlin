@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.hyperledger.ariesframework.decodeBase64
 import org.hyperledger.ariesframework.encodeBase64
+import java.util.UUID
 
 @Serializable
 class AttachmentData(
@@ -54,7 +55,7 @@ class Attachment(
     }
 
     companion object {
-        fun fromData(data: ByteArray, id: String): Attachment {
+        fun fromData(data: ByteArray, id: String = UUID.randomUUID().toString()): Attachment {
             return Attachment(
                 id = id,
                 mimetype = "application/json",

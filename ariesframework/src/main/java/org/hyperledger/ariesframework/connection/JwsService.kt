@@ -56,7 +56,7 @@ class JwsService(val agent: Agent) {
      * @param payload The payload to verify the JWS against.
      * @return A pair containing the validity of the JWS and the signer's verkey.
      */
-    suspend fun verifyJws(jws: Jws, payload: ByteArray): Pair<Boolean, String> {
+    fun verifyJws(jws: Jws, payload: ByteArray): Pair<Boolean, String> {
         logger.debug("Verifying JWS...")
         val firstSig = when(jws) {
             is JwsGeneralFormat -> jws

@@ -3,6 +3,7 @@ package org.hyperledger.ariesframework.agent
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.hyperledger.ariesframework.credentials.models.AutoAcceptCredential
+import org.hyperledger.ariesframework.oob.models.HandshakeProtocol
 import org.hyperledger.ariesframework.proofs.models.AutoAcceptProof
 
 @Serializable
@@ -35,6 +36,7 @@ enum class MediatorPickupStrategy {
  * @property publicDidSeed The seed to use for the public did. The public did is used to register items on the ledger. For testing.
  * @property agentEndpoints The agent endpoints to use for testing.
  * @property useReturnRoute Whether to use the transport-return-route. Default is true.
+ * @property preferredHandshakeProtocol The preferred handshake protocol to use. Default is [HandshakeProtocol.Connections].
  * @property endpoints The endpoints of the agent. Read only.
  */
 @Serializable
@@ -58,6 +60,7 @@ data class AgentConfig(
     var publicDidSeed: String? = null,
     var agentEndpoints: List<String>? = null,
     var useReturnRoute: Boolean = true,
+    var preferredHandshakeProtocol: HandshakeProtocol = HandshakeProtocol.Connections,
 ) {
     val endpoints: List<String>
         get() = agentEndpoints ?: listOf("didcomm:transport/queue")
