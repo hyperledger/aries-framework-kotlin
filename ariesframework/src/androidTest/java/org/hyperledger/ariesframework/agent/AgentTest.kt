@@ -10,6 +10,7 @@ import org.hyperledger.ariesframework.connection.messages.ConnectionInvitationMe
 import org.hyperledger.ariesframework.connection.models.ConnectionState
 import org.hyperledger.ariesframework.connection.repository.ConnectionRecord
 import org.hyperledger.ariesframework.oob.messages.OutOfBandInvitation
+import org.hyperledger.ariesframework.oob.models.HandshakeProtocol
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -152,12 +153,13 @@ class AgentTest {
     fun testDemoFaber() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         var config = TestHelper.getBcorvinConfig()
+        config.preferredHandshakeProtocol = HandshakeProtocol.DidExchange11
         config.mediatorConnectionsInvite = URL(mediatorInvitationUrl).readText()
 
         agent = Agent(context, config)
         agent.initialize()
 
-        val faberInvitationUrl = "http://localhost:9001?oob=eyJAdHlwZSI6Imh0dHBzOi8vZGlkY29tbS5vcmcvb3V0LW9mLWJhbmQvMS4xL2ludml0YXRpb24iLCJAaWQiOiIyNDFjNjNkMC1mMjZkLTRlNDktYjkyYy00N2JhYTk1MzAwMzUiLCJsYWJlbCI6ImZhYmVyIiwiYWNjZXB0IjpbImRpZGNvbW0vYWlwMSIsImRpZGNvbW0vYWlwMjtlbnY9cmZjMTkiXSwiaGFuZHNoYWtlX3Byb3RvY29scyI6WyJodHRwczovL2RpZGNvbW0ub3JnL2RpZGV4Y2hhbmdlLzEuMSIsImh0dHBzOi8vZGlkY29tbS5vcmcvY29ubmVjdGlvbnMvMS4wIl0sInNlcnZpY2VzIjpbeyJpZCI6IiNpbmxpbmUtMCIsInNlcnZpY2VFbmRwb2ludCI6Imh0dHA6Ly8xMC4wLjIuMjo5MDAxIiwidHlwZSI6ImRpZC1jb21tdW5pY2F0aW9uIiwicmVjaXBpZW50S2V5cyI6WyJkaWQ6a2V5Ono2TWttcDZNNjhNeHFuazlGUzdFZU5lUHpETmNSWXhpR1lUcUJFVm4yRjhENk41YSJdLCJyb3V0aW5nS2V5cyI6W119XX0" // ktlint-disable max-line-length
+        val faberInvitationUrl = "http://localhost:9001?oob=eyJAdHlwZSI6Imh0dHBzOi8vZGlkY29tbS5vcmcvb3V0LW9mLWJhbmQvMS4xL2ludml0YXRpb24iLCJAaWQiOiIzNDU5NDk5NS0xOTk3LTQ5ODItYTQ0MC0xMjE2OTk4YjllM2MiLCJsYWJlbCI6ImZhYmVyIiwiYWNjZXB0IjpbImRpZGNvbW0vYWlwMSIsImRpZGNvbW0vYWlwMjtlbnY9cmZjMTkiXSwiaGFuZHNoYWtlX3Byb3RvY29scyI6WyJodHRwczovL2RpZGNvbW0ub3JnL2RpZGV4Y2hhbmdlLzEuMSIsImh0dHBzOi8vZGlkY29tbS5vcmcvY29ubmVjdGlvbnMvMS4wIl0sInNlcnZpY2VzIjpbeyJpZCI6IiNpbmxpbmUtMCIsInNlcnZpY2VFbmRwb2ludCI6Imh0dHA6Ly8xMC4wLjIuMjo5MDAxIiwidHlwZSI6ImRpZC1jb21tdW5pY2F0aW9uIiwicmVjaXBpZW50S2V5cyI6WyJkaWQ6a2V5Ono2TWtrcnQ2NURBVG5zeUs2bTlwZFZIY01FWmNLTFJCOFl5VnhaYjU3dkFIN3JRNyJdLCJyb3V0aW5nS2V5cyI6W119XX0" // ktlint-disable max-line-length
         val invitation = OutOfBandInvitation.fromUrl(faberInvitationUrl)
         agent.oob.receiveInvitation(invitation)
 
