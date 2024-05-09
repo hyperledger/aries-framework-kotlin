@@ -95,6 +95,11 @@ Then, get the invitation urls from faber agent.
 Run `testDemoFaber()` with this url and operate the faber agent to issue a credential.
 Aliasing `10.0.2.2` as `lo0` is needed to allow the local mediator and the local faber can communicate with each other with the IP `10.0.2.2`.
 
+You can see the debug messages of faber agent by adding the following option to the agent config in `BaseAgent.ts`:
+```javascript
+    logger: new ConsoleLogger(LogLevel.debug),
+```
+
 ### Testing using the sample app
 
 You can run the sample app in `/app` directory. This sample app uses [Indicio Public Mediator](https://indicio-tech.github.io/mediator/) and connects to other agents by receiving invitions by scanning QR codes or by entering invitation urls. You can use the sample app to test the credential exchange flow and the proof exchange flow.
