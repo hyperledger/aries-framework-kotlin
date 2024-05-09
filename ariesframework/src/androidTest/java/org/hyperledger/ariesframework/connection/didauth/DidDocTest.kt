@@ -54,6 +54,18 @@ class DidDocTest {
                     "recipientKeys": ["DADEajsDSaksLng9h"],
                     "routingKeys": ["DADEajsDSaksLng9h"],
                     "priority": 10
+                },
+                {
+                    "id": "did:example:123456789abcdefghi#didcomm-1",
+                    "type": "DIDCommMessaging",
+                    "serviceEndpoint": {
+                        "uri": "https://example.com/path",
+                        "accept": [
+                            "didcomm/v2",
+                            "didcomm/aip2;env=rfc587"
+                        ],
+                        "routingKeys": ["did:example:somemediator#somekey"]
+                    }
                 }
             ],
             "authentication": [
@@ -94,6 +106,7 @@ class DidDocTest {
         assert(didDoc.service[0] is DidDocumentService)
         assert(didDoc.service[1] is IndyAgentService)
         assert(didDoc.service[2] is DidCommService)
+        assert(didDoc.service[3] is DidCommV2Service)
 
         assert(didDoc.authentication[0] is ReferencedAuthentication)
         assert(didDoc.authentication[1] is EmbeddedAuthentication)
@@ -105,7 +118,7 @@ class DidDocTest {
         assertEquals("did:sov:LjgpST2rjsoxYegQDRm7EL", encodedJson["id"]!!.jsonPrimitive.content)
         assertEquals("https://w3id.org/did/v1", encodedJson["@context"]!!.jsonPrimitive.content)
         assertEquals(3, encodedJson["publicKey"]!!.jsonArray.size)
-        assertEquals(3, encodedJson["service"]!!.jsonArray.size)
+        assertEquals(4, encodedJson["service"]!!.jsonArray.size)
         assertEquals(2, encodedJson["authentication"]!!.jsonArray.size)
 
         assertEquals("3", encodedJson["publicKey"]!!.jsonArray[0].jsonObject["id"]!!.jsonPrimitive.content)

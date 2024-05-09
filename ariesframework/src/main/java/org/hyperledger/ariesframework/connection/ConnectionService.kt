@@ -32,7 +32,7 @@ class ConnectionService(val agent: Agent) {
     val connectionRepository = agent.connectionRepository
     private val logger = LoggerFactory.getLogger(ConnectionService::class.java)
 
-    private fun createConnection(
+    fun createConnection(
         role: ConnectionRole,
         state: ConnectionState,
         invitation: ConnectionInvitationMessage? = null,

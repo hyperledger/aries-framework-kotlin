@@ -7,5 +7,5 @@ import kotlinx.serialization.Serializable
 @SerialName("DidDocumentService")
 class DidDocumentService(
     override val id: String,
-    override val serviceEndpoint: String,
+    val serviceEndpoint: String,
 ) : DidDocService()

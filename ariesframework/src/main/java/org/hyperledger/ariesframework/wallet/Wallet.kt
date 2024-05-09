@@ -33,7 +33,7 @@ class Wallet(private val agent: Agent) {
     private val secretIdKey = agent.agentConfig.label + " aries_framework_wallet_secret_id_key"
     private val logger = LoggerFactory.getLogger(Wallet::class.java)
     private val storeManager = AskarStoreManager()
-    private val keyFactory = LocalKeyFactory()
+    val keyFactory = LocalKeyFactory()
     private val crypto = AskarCrypto()
     var store: AskarStore? = null
     var session: AskarSession? = null
