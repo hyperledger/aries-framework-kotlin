@@ -73,4 +73,13 @@ class DidDoc(
             }
         }
     }
+
+    constructor(services: List<DidCommService>) : this(id = "") {
+        val service = services.firstOrNull()
+            ?: throw Exception("Creating a DidDoc from DidCommServices failed. services is empty.")
+        val key = service.recipientKeys.firstOrNull()
+            ?: throw Exception("Creating a DidDoc from DidCommServices failed. recipientKeys is empty.")
+        this.id = key
+        this.service = services
+    }
 }

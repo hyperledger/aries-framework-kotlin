@@ -69,18 +69,18 @@ class ProofService(val agent: Agent) {
      */
     suspend fun createRequest(
         proofRequest: ProofRequest,
-        connectionRecord: ConnectionRecord,
+        connectionRecord: ConnectionRecord? = null,
         comment: String? = null,
         autoAcceptProof: AutoAcceptProof? = null,
     ): Pair<RequestPresentationMessage, ProofExchangeRecord> {
-        connectionRecord.assertReady()
+        connectionRecord?.assertReady()
 
         val proofRequestJson = Json.encodeToString(proofRequest)
         val attachment = Attachment.fromData(proofRequestJson.toByteArray(), RequestPresentationMessage.INDY_PROOF_REQUEST_ATTACHMENT_ID)
         val message = RequestPresentationMessage(comment, listOf(attachment))
 
         val proofRecord = ProofExchangeRecord(
-            connectionId = connectionRecord.id,
+            connectionId = connectionRecord?.id ?: "connectionless-proof-request",
             threadId = message.threadId,
             state = ProofState.RequestSent,
             autoAcceptProof = autoAcceptProof,
@@ -162,9 +162,8 @@ class ProofService(val agent: Agent) {
      */
     suspend fun processPresentation(messageContext: InboundMessageContext): ProofExchangeRecord {
         val presentationMessage = MessageSerializer.decodeFromString(messageContext.plaintextMessage) as PresentationMessage
-        val connection = messageContext.assertReadyConnection()
 
-        val proofRecord = agent.proofRepository.getByThreadAndConnectionId(presentationMessage.threadId, connection.id)
+        val proofRecord = agent.proofRepository.getByThreadAndConnectionId(presentationMessage.threadId, null)
         proofRecord.assertState(ProofState.RequestSent)
 
         val indyProofJson = presentationMessage.indyProof()
