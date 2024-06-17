@@ -146,9 +146,8 @@ class OutOfBandCommand(val agent: Agent, private val dispatcher: Dispatcher) {
         return InvitationUrlParser.parseUrl(url)
     }
 
-    // Only Connection protocol is supported for now
     private fun getSupportedHandshakeProtocols(): List<HandshakeProtocol> {
-        return listOf(HandshakeProtocol.Connections)
+        return listOf(HandshakeProtocol.Connections, HandshakeProtocol.DidExchange11)
     }
 
     /**
@@ -259,13 +258,14 @@ class OutOfBandCommand(val agent: Agent, private val dispatcher: Dispatcher) {
                 }
             }
 
+            val handshakeProtocol = selectHandshakeProtocol(handshakeProtocols)
             if (connectionRecord == null) {
                 logger.debug("Creating new connection.")
                 if (!handshakeProtocols.contains(HandshakeProtocol.Connections)) {
                     throw Exception("Unsupported handshake protocol. Supported protocols: $handshakeProtocols")
                 }
 
-                connectionRecord = agent.connections.acceptOutOfBandInvitation(outOfBandRecord, config)
+                connectionRecord = agent.connections.acceptOutOfBandInvitation(outOfBandRecord, handshakeProtocol, config)
             }
 
             if (agent.connectionService.fetchState(connectionRecord) != ConnectionState.Complete) {
@@ -333,5 +333,22 @@ class OutOfBandCommand(val agent: Agent, private val dispatcher: Dispatcher) {
             return null
         }
         return connections.firstOrNull { it.isReady() }
+    }
+
+    private suspend fun selectHandshakeProtocol(handshakeProtocols: List<HandshakeProtocol>): HandshakeProtocol {
+        val supportedProtocols = getSupportedHandshakeProtocols()
+        if (handshakeProtocols.contains(agent.agentConfig.preferredHandshakeProtocol) &&
+            supportedProtocols.contains(agent.agentConfig.preferredHandshakeProtocol)
+        ) {
+            return agent.agentConfig.preferredHandshakeProtocol
+        }
+
+        for (protocolName in handshakeProtocols) {
+            if (supportedProtocols.contains(protocolName)) {
+                return protocolName
+            }
+        }
+
+        throw Exception("None of the provided handshake protocols $handshakeProtocols are supported. Supported protocols are $supportedProtocols")
     }
 }

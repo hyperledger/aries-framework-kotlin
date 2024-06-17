@@ -19,6 +19,7 @@ import org.hyperledger.ariesframework.connection.messages.DidExchangeResponseMes
 import org.hyperledger.ariesframework.connection.messages.TrustPingMessage
 import org.hyperledger.ariesframework.connection.repository.ConnectionRecord
 import org.hyperledger.ariesframework.oob.messages.OutOfBandInvitation
+import org.hyperledger.ariesframework.oob.models.HandshakeProtocol
 import org.hyperledger.ariesframework.oob.models.ReceiveOutOfBandInvitationConfig
 import org.hyperledger.ariesframework.oob.repository.OutOfBandRecord
 import org.slf4j.LoggerFactory
@@ -143,11 +144,13 @@ class ConnectionCommand(val agent: Agent, private val dispatcher: Dispatcher) {
      * Accept a connection invitation as invitee (by sending a connection request message) for the connection with the specified connection id.
      * This is not needed when auto accepting of connections is enabled.
      * @param outOfBandRecord out of band record containing the invitation to accept.
+     * @param handshakeProtocol handshake protocol to use for accepting the invitation.
      * @param config optional config for accepting the invitation.
      * @return new connection record.
      */
     suspend fun acceptOutOfBandInvitation(
         outOfBandRecord: OutOfBandRecord,
+        handshakeProtocol: HandshakeProtocol,
         config: ReceiveOutOfBandInvitationConfig? = null,
     ): ConnectionRecord {
         val connection = receiveInvitation(
@@ -156,12 +159,20 @@ class ConnectionCommand(val agent: Agent, private val dispatcher: Dispatcher) {
             false,
             config?.alias,
         )
-        val message = agent.connectionService.createRequest(
-            connection.id,
-            config?.label,
-            config?.imageUrl,
-            config?.autoAcceptConnection,
-        )
+        val message = if (handshakeProtocol == HandshakeProtocol.Connections) {
+            agent.connectionService.createRequest(
+                connection.id,
+                config?.label,
+                config?.imageUrl,
+                config?.autoAcceptConnection,
+            )
+        } else {
+            agent.didExchangeService.createRequest(
+                connection.id,
+                config?.label,
+                config?.autoAcceptConnection,
+            )
+        }
         agent.messageSender.send(message)
         return message.connection
     }

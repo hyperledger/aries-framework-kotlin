@@ -52,7 +52,7 @@ class LedgerService(val agent: Agent) {
         logger.info("Initializing Pool")
         if (pool != null) {
             logger.warn("Pool already initialized.")
-            close()
+            return
         }
 
         setProtocolVersion(2)
@@ -360,10 +360,7 @@ class LedgerService(val agent: Agent) {
         return response
     }
 
-    suspend fun close() {
-        if (pool != null) {
-            pool!!.close()
-            pool = null
-        }
+    fun close() {
+        logger.warn("Do not call close on LedgerService. It will be auto closed")
     }
 }

@@ -38,7 +38,7 @@ class PeerDIDService(val agent: Agent) {
         val (endpoints, routingKeys) = agent.mediationRecipient.getRoutingInfo()
         val didRoutingKeys = routingKeys.map { rawKey ->
             val key = DIDParser.convertVerkeyToDidKey(rawKey)
-            return "$key#${DIDParser.getMethodId(key)}"
+            return@map "$key#${DIDParser.getMethodId(key)}"
         }
         val authKey = VerificationMaterialAuthentication(
             type = VerificationMethodTypeAuthentication.ED25519_VERIFICATION_KEY_2020,
