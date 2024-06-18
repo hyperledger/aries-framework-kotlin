@@ -17,6 +17,8 @@ import org.hyperledger.ariesframework.connection.messages.DidExchangeCompleteMes
 import org.hyperledger.ariesframework.connection.messages.DidExchangeRequestMessage
 import org.hyperledger.ariesframework.connection.messages.DidExchangeResponseMessage
 import org.hyperledger.ariesframework.connection.messages.TrustPingMessage
+import org.hyperledger.ariesframework.connection.models.ConnectionState
+import org.hyperledger.ariesframework.connection.models.didauth.DidDoc
 import org.hyperledger.ariesframework.connection.repository.ConnectionRecord
 import org.hyperledger.ariesframework.oob.messages.OutOfBandInvitation
 import org.hyperledger.ariesframework.oob.models.HandshakeProtocol
@@ -150,7 +152,7 @@ class ConnectionCommand(val agent: Agent, private val dispatcher: Dispatcher) {
      */
     suspend fun acceptOutOfBandInvitation(
         outOfBandRecord: OutOfBandRecord,
-        handshakeProtocol: HandshakeProtocol,
+        handshakeProtocol: HandshakeProtocol? = null,
         config: ReceiveOutOfBandInvitationConfig? = null,
     ): ConnectionRecord {
         val connection = receiveInvitation(
@@ -159,6 +161,14 @@ class ConnectionCommand(val agent: Agent, private val dispatcher: Dispatcher) {
             false,
             config?.alias,
         )
+
+        if (handshakeProtocol == null) {
+            val didDocServices = outOfBandRecord.outOfBandInvitation.services.mapNotNull { it.asDidCommService() }
+            connection.theirDidDoc = connection.theirDidDoc ?: DidDoc(didDocServices)
+            agent.connectionService.updateState(connection, ConnectionState.Complete)
+            return connection
+        }
+
         val message = if (handshakeProtocol == HandshakeProtocol.Connections) {
             agent.connectionService.createRequest(
                 connection.id,

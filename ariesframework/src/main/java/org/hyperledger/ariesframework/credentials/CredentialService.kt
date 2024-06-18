@@ -238,7 +238,7 @@ class CredentialService(val agent: Agent) {
 
         var credentialRecord = credentialExchangeRepository.getByThreadAndConnectionId(
             requestMessage.threadId,
-            messageContext.connection?.id,
+            null,
         )
 
         // The credential offer may have been a connectionless-offer.

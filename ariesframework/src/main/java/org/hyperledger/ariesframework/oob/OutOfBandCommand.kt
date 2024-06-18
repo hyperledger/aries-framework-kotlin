@@ -6,6 +6,7 @@ import org.hyperledger.ariesframework.agent.AgentEvents
 import org.hyperledger.ariesframework.agent.Dispatcher
 import org.hyperledger.ariesframework.agent.MessageSerializer
 import org.hyperledger.ariesframework.connection.messages.ConnectionInvitationMessage
+import org.hyperledger.ariesframework.connection.models.ConnectionRole
 import org.hyperledger.ariesframework.connection.models.ConnectionState
 import org.hyperledger.ariesframework.connection.repository.ConnectionRecord
 import org.hyperledger.ariesframework.oob.handlers.HandshakeReuseAcceptedHandler
@@ -94,8 +95,26 @@ class OutOfBandCommand(val agent: Agent, private val dispatcher: Dispatcher) {
             imageUrl = imageUrl,
         )
 
-        messages.forEach { message ->
-            outOfBandInvitation.addRequest(message)
+        if (messages.isNotEmpty()) {
+            messages.forEach { message ->
+                outOfBandInvitation.addRequest(message)
+            }
+            if (!handshake) {
+                val connectionRecord = agent.connectionService.createConnection(
+                    role = ConnectionRole.Inviter,
+                    state = ConnectionState.Complete,
+                    outOfBandInvitation = outOfBandInvitation,
+                    alias = null,
+                    routing = routing,
+                    theirLabel = null,
+                    autoAcceptConnection = true,
+                    multiUseInvitation = false,
+                    tags = null,
+                    imageUrl = null,
+                    threadId = null,
+                )
+                agent.connectionRepository.save(connectionRecord)
+            }
         }
 
         val outOfBandRecord = OutOfBandRecord(
@@ -178,7 +197,7 @@ class OutOfBandCommand(val agent: Agent, private val dispatcher: Dispatcher) {
         val imageUrl = config?.imageUrl ?: agent.agentConfig.connectionImageUrl
 
         val messages = invitation.getRequestsJson()
-        require(invitation.handshakeProtocols?.size ?: 0 > 0 || messages.size > 0) {
+        require((invitation.handshakeProtocols?.size ?: 0) > 0 || messages.isNotEmpty()) {
             "One of handshake_protocols and requests~attach MUST be included in the message."
         }
         require(invitation.fingerprints().isNotEmpty()) {
@@ -240,60 +259,44 @@ class OutOfBandCommand(val agent: Agent, private val dispatcher: Dispatcher) {
 
         val messages = outOfBandRecord.outOfBandInvitation.getRequestsJson()
         val handshakeProtocols = outOfBandRecord.outOfBandInvitation.handshakeProtocols ?: emptyList()
-        if (handshakeProtocols.isNotEmpty()) {
-            var connectionRecord: ConnectionRecord? = null
-            if (existingConnection != null && config?.reuseConnection == true) {
-                if (messages.isNotEmpty()) {
-                    logger.debug("Skip handshake and reuse existing connection ${existingConnection.id}")
+        var connectionRecord: ConnectionRecord? = null
+        if (existingConnection != null && config?.reuseConnection == true) {
+            if (messages.isNotEmpty()) {
+                logger.debug("Skip handshake and reuse existing connection ${existingConnection.id}")
+                connectionRecord = existingConnection
+            } else {
+                logger.debug("Start handshake to reuse connection.")
+                val isHandshakeReuseSuccessful =
+                    handleHandshakeReuse(outOfBandRecord = outOfBandRecord, connectionRecord = existingConnection)
+                if (isHandshakeReuseSuccessful) {
                     connectionRecord = existingConnection
                 } else {
-                    logger.debug("Start handshake to reuse connection.")
-                    val isHandshakeReuseSuccessful =
-                        handleHandshakeReuse(outOfBandRecord = outOfBandRecord, connectionRecord = existingConnection)
-                    if (isHandshakeReuseSuccessful) {
-                        connectionRecord = existingConnection
-                    } else {
-                        logger.warn("Handshake reuse failed. Not using existing connection ${existingConnection.id}")
-                    }
+                    logger.warn("Handshake reuse failed. Not using existing connection ${existingConnection.id}")
                 }
-            }
-
-            val handshakeProtocol = selectHandshakeProtocol(handshakeProtocols)
-            if (connectionRecord == null) {
-                logger.debug("Creating new connection.")
-                if (!handshakeProtocols.contains(HandshakeProtocol.Connections)) {
-                    throw Exception("Unsupported handshake protocol. Supported protocols: $handshakeProtocols")
-                }
-
-                connectionRecord = agent.connections.acceptOutOfBandInvitation(outOfBandRecord, handshakeProtocol, config)
-            }
-
-            if (agent.connectionService.fetchState(connectionRecord) != ConnectionState.Complete) {
-                val result = agent.eventBus.waitFor<AgentEvents.ConnectionEvent> { it.record.state == ConnectionState.Complete }
-                if (!result) {
-                    throw Exception("Connection timed out.")
-                }
-            }
-            connectionRecord = agent.connectionRepository.getById(connectionRecord.id)
-            if (!outOfBandRecord.reusable) {
-                agent.outOfBandService.updateState(outOfBandRecord, OutOfBandState.Done)
-            }
-
-            if (messages.isNotEmpty()) {
-                processMessages(messages, connectionRecord)
-            }
-            return Pair(outOfBandRecord, connectionRecord)
-        } else if (messages.isNotEmpty()) {
-            logger.debug("Out of band message contains only request messages.")
-            if (existingConnection != null) {
-                processMessages(messages, existingConnection)
-            } else {
-                // TODO: send message to the service endpoint
-                throw Exception("Cannot process request messages. No connection found.")
             }
         }
 
-        return Pair(outOfBandRecord, null)
+        val handshakeProtocol = selectHandshakeProtocol(handshakeProtocols)
+        if (connectionRecord == null) {
+            logger.debug("Creating new connection.")
+            connectionRecord = agent.connections.acceptOutOfBandInvitation(outOfBandRecord, handshakeProtocol, config)
+        }
+
+        if (handshakeProtocol != null && agent.connectionService.fetchState(connectionRecord) != ConnectionState.Complete) {
+            val result = agent.eventBus.waitFor<AgentEvents.ConnectionEvent> { it.record.state == ConnectionState.Complete }
+            if (!result) {
+                throw Exception("Connection timed out.")
+            }
+        }
+        connectionRecord = agent.connectionRepository.getById(connectionRecord.id)
+        if (!outOfBandRecord.reusable) {
+            agent.outOfBandService.updateState(outOfBandRecord, OutOfBandState.Done)
+        }
+
+        if (messages.isNotEmpty()) {
+            processMessages(messages, connectionRecord)
+        }
+        return Pair(outOfBandRecord, connectionRecord)
     }
 
     private suspend fun processMessages(messages: List<String>, connectionRecord: ConnectionRecord) {
@@ -335,7 +338,11 @@ class OutOfBandCommand(val agent: Agent, private val dispatcher: Dispatcher) {
         return connections.firstOrNull { it.isReady() }
     }
 
-    private suspend fun selectHandshakeProtocol(handshakeProtocols: List<HandshakeProtocol>): HandshakeProtocol {
+    private suspend fun selectHandshakeProtocol(handshakeProtocols: List<HandshakeProtocol>): HandshakeProtocol? {
+        if (handshakeProtocols.isEmpty()) {
+            return null
+        }
+
         val supportedProtocols = getSupportedHandshakeProtocols()
         if (handshakeProtocols.contains(agent.agentConfig.preferredHandshakeProtocol) &&
             supportedProtocols.contains(agent.agentConfig.preferredHandshakeProtocol)

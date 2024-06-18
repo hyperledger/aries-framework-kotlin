@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import org.hyperledger.ariesframework.credentials.models.AutoAcceptCredential
 import org.hyperledger.ariesframework.oob.models.HandshakeProtocol
 import org.hyperledger.ariesframework.proofs.models.AutoAcceptProof
+import org.hyperledger.ariesframework.routing.Routing
 
 @Serializable
 enum class MediatorPickupStrategy {
@@ -63,5 +64,5 @@ data class AgentConfig(
     var preferredHandshakeProtocol: HandshakeProtocol = HandshakeProtocol.Connections,
 ) {
     val endpoints: List<String>
-        get() = agentEndpoints ?: listOf("didcomm:transport/queue")
+        get() = agentEndpoints ?: listOf(Routing.DID_COMM_TRANSPORT_QUEUE)
 }

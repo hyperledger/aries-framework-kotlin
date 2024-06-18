@@ -6,4 +6,8 @@ data class Routing(
     val did: String,
     val routingKeys: List<String>,
     val mediatorId: String?,
-)
+) {
+    companion object {
+        val DID_COMM_TRANSPORT_QUEUE = "didcomm:transport/queue"
+    }
+}
